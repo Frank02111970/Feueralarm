@@ -1,0 +1,1685 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Feueralarm – api GmbH</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:sans-serif;background:#f0f0f0}
+
+/* LOGIN PAGE */
+#pg-login{
+  background:#1e3a8a;min-height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;padding:24px;
+}
+#pg-login.hidden{display:none}
+
+/* APP PAGE */
+#pg-app{display:none;flex-direction:column;min-height:100vh}
+#pg-app.visible{display:flex}
+
+/* TOPBAR */
+.topbar{background:#fff;display:flex;align-items:center;padding:10px 20px;gap:10px;
+  position:sticky;top:0;z-index:100;border-bottom:1px solid #e0e0e0;
+  box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.tb-sep{width:1px;height:36px;background:#e0e0e0;flex-shrink:0}
+.tb-spacer{flex:1}
+
+/* TABS */
+.tabs-inner{background:#fff;display:flex;overflow-x:auto}.tabs-inner::-webkit-scrollbar{display:none}
+
+.tab{padding:14px 20px;font-size:14px;font-weight:600;color:#888;cursor:pointer;
+  border-bottom:3px solid transparent;white-space:nowrap}
+.tab.on{color:#CC0000;border-bottom-color:#CC0000}
+
+/* PAGES */
+.pg{display:none;flex:1}
+.pg.on{display:block}
+.page{padding:20px;max-width:800px;margin:0 auto}
+
+/* LOGIN BOX */
+.login-logo{font-size:64px;text-align:center;margin-bottom:8px}
+.login-title{font-size:28px;font-weight:bold;text-align:center;color:#fff;margin-bottom:4px}
+.login-sub{color:#aaa;text-align:center;font-size:14px;margin-bottom:24px}
+.login-box{background:#fff;border-radius:16px;padding:32px;width:100%;max-width:400px}
+
+/* FORMS */
+label{display:block;font-size:13px;font-weight:600;color:#555;margin:12px 0 4px}
+input,select,textarea{width:100%;border:1.5px solid #ddd;border-radius:8px;padding:11px 13px;font-size:15px;font-family:inherit}
+input:focus,select:focus{outline:none;border-color:#CC0000}
+textarea{resize:vertical;min-height:70px}
+
+/* BUTTONS */
+.btn{display:block;width:100%;border:none;border-radius:8px;padding:13px;
+  font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;margin-top:16px}
+.btn-red{background:#CC0000;color:#fff}
+.btn-red:hover{background:#aa0000}
+.sbtn{border:none;border-radius:8px;padding:8px 12px;font-size:13px;
+  font-weight:600;cursor:pointer;font-family:inherit}
+.sbtn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+.sbtn-dark{background:#1a1a2e;color:#fff;border-radius:50px;padding:10px 22px;
+  font-size:14px;font-weight:600;border:none;cursor:pointer;font-family:inherit}
+.btn-gray{background:#f0f0f0;color:#333}
+
+/* HOME */
+.stat-box{background:#1e3a8a;border-radius:16px;padding:28px;text-align:center;
+  margin-bottom:16px;position:relative;overflow:hidden}
+.stat-box::before{content:"🔥";font-size:120px;position:absolute;
+  right:-10px;top:-10px;opacity:.07;line-height:1}
+.stat-num{font-size:80px;font-weight:bold;color:#fff;line-height:1}
+.stat-lbl{color:#aaa;font-size:14px;margin-top:4px}
+.alarm-btn{background:#CC0000;border:none;border-radius:16px;padding:32px;
+  width:100%;cursor:pointer;text-align:center;margin-bottom:20px;
+  box-shadow:0 6px 24px rgba(204,0,0,.4);transition:all .2s}
+.alarm-btn:hover{transform:translateY(-2px)}
+.alarm-btn.orange{background:#FF6600}
+.banner{background:#FF6600;color:#fff;padding:12px 20px;text-align:center;
+  font-weight:700;font-size:15px;cursor:pointer}
+
+/* CARDS */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sec-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888}
+.card{background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:6px;
+  display:flex;align-items:center;gap:12px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.ci{flex:1;min-width:0}
+.cn{font-size:15px;font-weight:600}
+.cd{font-size:12px;color:#888;margin-top:2px}
+.dot{width:11px;height:11px;border-radius:50%;flex-shrink:0}
+.empty{text-align:center;padding:40px 20px;color:#aaa}
+
+/* ALARM */
+.ah{background:#CC0000;padding:20px;color:#fff}
+.at{font-size:28px;font-weight:bold;letter-spacing:2px;text-align:center}
+.astats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.astat{background:rgba(255,255,255,.15);border-radius:10px;padding:10px;text-align:center}
+.astat-n{font-size:28px;font-weight:bold;color:#fff}
+.astat-l{font-size:11px;opacity:.8;margin-top:2px}
+.cc{background:#fff;border-radius:12px;padding:14px;margin-bottom:8px;
+  border-left:5px solid #ddd;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.cc.safe{border-left-color:#2e7d32}
+.cc.missing{border-left-color:#c62828}
+.cc.injured{border-left-color:#e65100}
+.arow{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.resolve-bar{position:fixed;bottom:65px;left:0;right:0;background:#fff;
+  border-top:1px solid #eee;padding:14px 20px;display:flex;gap:10px;
+  box-shadow:0 -4px 16px rgba(0,0,0,.08);z-index:300}
+
+/* STATUS BADGES */
+.adj{font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px}
+.adj.present{background:#e8f5e9;color:#2e7d32}
+.adj.sick{background:#f3e5f5;color:#6a1b9a}
+.adj.vacation{background:#e3f2fd;color:#1565c0}
+.adj.homeoffice{background:#e0f2f1;color:#00695c}
+.adj.absent{background:#f5f5f5;color:#37474f}
+.role{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px}
+.role.admin{background:#fff3e0;color:#e65100}
+.role.dept_head{background:#e3f2fd;color:#1565c0}
+.role.viewer{background:#f5f5f5;color:#555}
+
+/* SHIFTS */
+.daypick{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.daybtn{border:1.5px solid #ddd;background:#fff;border-radius:8px;
+  padding:6px 10px;font-size:13px;cursor:pointer;font-family:inherit}
+.daybtn.on{border-color:#CC0000;background:#CC0000;color:#fff}
+.shift-pill{display:inline-flex;align-items:center;gap:6px;background:#f0f0f0;
+  border-radius:20px;padding:4px 10px;font-size:12px;margin:2px}
+.shift-pill button{background:none;border:none;cursor:pointer;color:#888;font-size:14px}
+
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);
+  z-index:500;align-items:center;justify-content:center;padding:20px}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;padding:24px;width:100%;
+  max-width:440px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:16px}
+.modal-acts{display:flex;gap:8px;margin-top:20px}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;left:50%;
+  transform:translateX(-50%) translateY(80px);
+  background:#222;color:#fff;padding:10px 22px;border-radius:8px;
+  font-size:14px;transition:transform .3s;pointer-events:none;z-index:999}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.toast.ok{background:#2e7d32}
+.toast.err{background:#c62828}
+
+@media (max-width: 600px) {
+  .topbar-desktop { display: none !important; }
+  .topbar-mobile-only { display: flex !important; }
+  .topbar-desktop { display: none !important; }
+  .tabs { top: 57px !important; }
+  .page { padding: 12px !important; }
+  .stat-num { font-size: 60px !important; }
+  .alarm-btn { padding: 24px !important; }
+  .alarm-btn span:first-child { font-size: 36px !important; }
+  #abt { font-size: 24px !important; }
+  .astats { grid-template-columns: repeat(2,1fr) !important; }
+  .arow { flex-direction: column !important; }
+  .arow .sbtn { flex: none !important; width: 100% !important; }
+  .resolve-bar { padding: 10px 12px !important; }
+  .modal { padding: 16px !important; }
+  .tabs .tab { padding: 12px 14px !important; font-size: 12px !important; }
+}
+
+.topbar-mobile { display: none; }
+.topbar-mobile-only { display: none; }
+.bn-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: color .15s;
+  min-width: 0;
+}
+.bn-btn span {
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: visible;
+  max-width: 80px;
+  text-align: center;
+}
+.bn-btn.active {
+  color: #CC0000;
+}
+/* Add padding to pages so content isn't hidden behind bottom nav */
+.pg { padding-bottom: 70px; }
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN PAGE ═══ -->
+<div id="pg-login">
+  <div class="login-logo">🔥</div>
+  <div class="login-title">Feueralarm</div>
+  <div class="login-sub">api GmbH – Evakuierungsmanagement</div>
+  <div class="login-box">
+    <form onsubmit="doLogin(); return false;" action="javascript:void(0)">
+      <label>Benutzername</label>
+      <input type="text" id="lu" placeholder="z.B. admin" autocomplete="username">
+      <label>Passwort</label>
+      <input type="password" id="lp" placeholder="Passwort" autocomplete="current-password">
+      <div style="color:#CC0000;font-size:13px;margin-top:8px;min-height:18px" id="lerr"></div>
+      <button type="submit" class="btn btn-red">Anmelden</button>
+    </form>
+    <div style="font-size:12px;color:#aaa;text-align:center;margin-top:14px">
+      admin / admin123 &nbsp;·&nbsp; Frank Fritsche / admin123
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP PAGE ═══ -->
+<div id="pg-app">
+
+
+  <!-- TOPBAR -->
+  <div style="background:#fff;position:sticky;top:0;z-index:100;border-bottom:1px solid #e0e0e0;box-shadow:0 2px 8px rgba(0,0,0,.08)">
+    <div style="display:flex;align-items:center;padding:10px 20px;gap:10px;max-width:900px;width:100%">
+      <img src="data:image/png;base64,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" style="height:36px;object-fit:contain;flex-shrink:0" alt="api GmbH">
+      <div style="width:1px;height:30px;background:#e0e0e0;flex-shrink:0"></div>
+      <span style="font-size:14px;font-weight:700;color:#1a1a2e;white-space:nowrap">Feueralarm</span>
+      <span style="font-size:13px;color:#aaa;white-space:nowrap" class="topbar-desktop">Evakuierungsmanagement</span>
+      <div style="flex:1"></div>
+      <div style="width:1px;height:30px;background:#e0e0e0;flex-shrink:0" class="topbar-desktop"></div>
+      <div style="text-align:center" class="topbar-desktop">
+        <div style="font-size:14px;font-weight:700;color:#1a1a2e;white-space:nowrap" id="topDate"></div>
+        <div style="font-size:12px;color:#888;white-space:nowrap" id="topTime"></div>
+      </div>
+      <div style="flex:1"></div>
+      <div style="width:1px;height:30px;background:#e0e0e0;flex-shrink:0" class="topbar-desktop"></div>
+      <span id="topUser" style="font-size:13px;font-weight:600;color:#1a1a2e;white-space:nowrap;flex-shrink:0" class="topbar-desktop"></span>
+      <button class="sbtn-dark topbar-desktop" onclick="doLogout()" style="padding:8px 16px;font-size:13px;flex-shrink:0">Abmelden</button>
+      <button class="sbtn-dark topbar-mobile-only" onclick="doLogout()" style="padding:8px 14px;font-size:13px;flex-shrink:0">Abmelden</button>
+    </div>
+  </div>
+
+  <!-- HOME -->
+  <div class="pg on" id="pg-home">
+    <div id="alarmBanner" class="banner" style="display:none" onclick="showTab('alarm')">
+      ⚠️ AKTIVER ALARM — Zur Evakuierungsliste
+    </div>
+    <div class="page">
+      <div class="stat-box">
+        <div class="stat-num" id="pCount">0</div>
+        <div class="stat-lbl">Mitarbeiter aktuell anwesend</div>
+        <div style="font-size:12px;color:#555;margin-top:4px" id="pTime"></div>
+      </div>
+      <button class="alarm-btn" id="mainAlarmBtn" onclick="alarmClick()">
+        <span style="font-size:48px;display:block">🔥</span>
+        <span id="abt" style="font-size:30px;font-weight:bold;color:#fff;display:block;margin-top:8px;letter-spacing:2px">FEUERALARM</span>
+        <span id="abs" style="font-size:13px;color:rgba(255,255,255,.75);display:block;margin-top:4px">Anwesenheitsliste erstellen</span>
+      </button>
+      <div class="sec-hdr">
+        <div class="sec-title">Aktuell anwesend</div>
+        <button class="sbtn btn-gray sbtn-sm" onclick="loadHome()">↻ Aktualisieren</button>
+      </div>
+      <div id="pList"></div>
+    </div>
+  </div>
+
+  <!-- ALARM -->
+  <div class="pg" id="pg-alarm">
+    <div class="ah">
+      <div class="at">🔥 EVAKUIERUNGSLISTE</div>
+      <div style="font-size:12px;text-align:center;opacity:.75;margin-top:4px" id="aTime"></div>
+      <div class="astats">
+        <div class="astat"><div class="astat-n" id="aSafe">0</div><div class="astat-l">Sicher</div></div>
+        <div class="astat"><div class="astat-n" id="aMiss">0</div><div class="astat-l">Vermisst</div></div>
+        <div class="astat"><div class="astat-n" id="aInj">0</div><div class="astat-l">Verletzt</div></div>
+        <div class="astat"><div class="astat-n" id="aTotal">0</div><div class="astat-l">Gesamt</div></div>
+      </div>
+    </div>
+    <div style="padding:12px 20px 160px;max-width:800px;margin:0 auto" id="ciList"></div>
+    <div class="resolve-bar">
+      <button class="sbtn btn-gray" style="flex:1;padding:12px" onclick="loadAlarm()">↻</button>
+      <button class="sbtn btn-red" style="flex:2;padding:12px;background:#CC0000;color:#fff;border-radius:8px" onclick="endAlarm()">Alarm beenden</button>
+    </div>
+  </div>
+
+  <!-- EMPLOYEES -->
+  <div class="pg" id="pg-emp">
+    <div class="page">
+      <div class="sec-hdr" style="margin-bottom:14px">
+        <div class="sec-title">Mitarbeiter</div>
+        <button class="sbtn sbtn-sm" style="background:#CC0000;color:#fff" onclick="openEmpModal()">+ Hinzufügen</button>
+      </div>
+
+      <!-- Excel Import Box -->
+      <div style="background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;border:2px dashed #e0e0e0">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <span style="font-size:24px">📊</span>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#1a1a2e">Excel Import</div>
+            <div style="font-size:12px;color:#888">Mehrere Mitarbeiter auf einmal importieren</div>
+          </div>
+        </div>
+
+        <!-- Column info -->
+        <div style="background:#f8f9ff;border-radius:8px;padding:12px;margin-bottom:14px">
+          <div style="font-size:12px;font-weight:700;color:#1e3a8a;margin-bottom:8px;text-transform:uppercase;letter-spacing:1px">Erforderliche Spalten</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            <span style="background:#1e3a8a;color:#fff;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px">Name <span style="opacity:.7;font-size:10px">*Pflicht</span></span>
+            <span style="background:#e8f0fe;color:#1e3a8a;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px">Position</span>
+            <span style="background:#e8f0fe;color:#1e3a8a;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px">Abteilung</span>
+            <span style="background:#e8f0fe;color:#1e3a8a;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px">Telefon</span>
+            <span style="background:#e8f0fe;color:#1e3a8a;font-size:12px;font-weight:600;padding:4px 10px;border-radius:6px">Status</span>
+          </div>
+          <div style="margin-top:10px;font-size:12px;color:#555">
+            <div style="margin-bottom:4px">📌 <b>Status</b> kann sein: <span style="color:#2e7d32">Anwesend</span> · <span style="color:#6a1b9a">Homeoffice</span> · <span style="color:#c62828">Krank</span> · <span style="color:#1565c0">Urlaub</span> · <span style="color:#37474f">Abwesend</span></div>
+            <div>📌 Bereits vorhandene Mitarbeiter (gleicher Name) werden übersprungen</div>
+          </div>
+        </div>
+
+        <!-- Buttons -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <button class="sbtn" style="background:#1e3a8a;color:#fff;padding:10px 18px;font-size:14px;flex:1;min-width:140px" onclick="dlTemplate()">
+            📄 Vorlage herunterladen
+          </button>
+          <button class="sbtn" style="background:#CC0000;color:#fff;padding:10px 18px;font-size:14px;flex:1;min-width:140px" onclick="document.getElementById('xlsxIn').click()">
+            📥 Excel importieren
+          </button>
+          <input type="file" id="xlsxIn" accept=".xlsx,.xls,.csv" style="display:none" onchange="importXlsx(this)">
+        </div>
+      </div>
+      <input type="text" id="empQ" placeholder="Suchen…" oninput="renderEmps()" style="margin-bottom:14px">
+      <div id="empList"></div>
+    </div>
+  </div>
+
+  <!-- ADJUSTMENTS -->
+  <div class="pg" id="pg-adj">
+    <div class="page">
+      <div class="sec-hdr" style="margin-bottom:12px">
+        <div class="sec-title">Anwesenheitsstatus</div>
+        <button class="sbtn sbtn-sm" style="background:#CC0000;color:#fff" onclick="openAdjModal()">+ Anpassen</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">
+        <input type="date" id="adjDateIn" onchange="renderAdjs()" style="width:auto">
+        <button class="sbtn sbtn-sm btn-gray" onclick="renderAdjs()">↻</button>
+      </div>
+      <div id="adjList"></div>
+    </div>
+  </div>
+
+  <!-- DEPTS -->
+  <div class="pg" id="pg-depts">
+    <div style="background:#1a1a2e;padding:12px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:57px;z-index:80">
+      <button onclick="deptPrev()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:22px;width:36px;height:36px;border-radius:8px;cursor:pointer">&#8249;</button>
+      <div style="flex:1;text-align:center">
+        <div style="color:#fff;font-size:15px;font-weight:600" id="deptDateLbl"></div>
+        <div id="deptTodayLnk" style="color:#aaa;font-size:12px;cursor:pointer;margin-top:2px" onclick="deptToday()">→ Heute</div>
+      </div>
+      <button onclick="deptNext()" style="background:rgba(255,255,255,.15);border:none;color:#fff;font-size:22px;width:36px;height:36px;border-radius:8px;cursor:pointer">&#8250;</button>
+    </div>
+    <div class="page" id="deptContent"></div>
+  </div>
+
+  <!-- HISTORY -->
+  <div class="pg" id="pg-hist">
+    <div class="page">
+      <div class="sec-hdr" style="margin-bottom:14px">
+        <div class="sec-title">Alarm-Historie</div>
+        <button class="sbtn sbtn-sm btn-gray" onclick="renderHist()">↻</button>
+      </div>
+      <div id="histList"></div>
+    </div>
+  </div>
+
+  <!-- ADMIN -->
+  <div class="pg" id="pg-admin">
+    <div class="page">
+      <div style="display:flex;gap:8px;margin-bottom:20px">
+        <button class="sbtn sbtn-sm" style="background:#1e3a8a;color:#fff" onclick="exportSettings()">💾 Einstellungen exportieren</button>
+        <button class="sbtn sbtn-sm btn-gray" onclick="document.getElementById('importInput').click()">📂 Einstellungen importieren</button>
+        <input type="file" id="importInput" accept=".json" style="display:none" onchange="importSettings(this)">
+      </div>
+      <div class="sec-hdr" style="margin-bottom:14px">
+        <div class="sec-title">Benutzer</div>
+        <button class="sbtn sbtn-sm" style="background:#CC0000;color:#fff" onclick="openUserModal()">+ Benutzer</button>
+      </div>
+      <div id="userList"></div>
+      <div class="sec-hdr" style="margin:20px 0 14px">
+        <div class="sec-title">Abteilungen</div>
+        <button class="sbtn sbtn-sm" style="background:#CC0000;color:#fff" onclick="openDeptAdminModal()">+ Abteilung</button>
+      </div>
+      <div id="deptAdminList"></div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div id="bottomNav" style="position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid #e0e0e0;display:none;z-index:200;box-shadow:0 -2px 12px rgba(0,0,0,.08)">
+    <button onclick="showTab('home')"   id="bn-home"  class="bn-btn">🏠<span>Übersicht</span></button>
+    <button onclick="showTab('emp')"    id="bn-emp"   class="bn-btn" style="display:none">👥<span>Mitarbeiter</span></button>
+    <button onclick="showTab('adj')"    id="bn-adj"   class="bn-btn" style="display:none">📅<span>Anwesenheit</span></button>
+    <button onclick="showTab('emp')"  id="bn-depts" class="bn-btn">🏢<span>Mitarbeiter & Abt.</span></button>
+    <button onclick="showTab('hist')"   id="bn-hist"  class="bn-btn">📋<span>Historie</span></button>
+    <button onclick="showTab('admin')"  id="bn-admin" class="bn-btn" style="display:none">⚙️<span>Admin</span></button>
+  </div>
+</div><!-- end pg-app -->
+
+<!-- ═══ MODALS ═══ -->
+<div class="overlay" id="mEmp">
+  <div class="modal">
+    <div class="modal-title" id="mEmpTitle">Mitarbeiter</div>
+    <label>Name *</label><input type="text" id="eName">
+    <label>Abteilung *</label><select id="eDept"></select>
+    <label>Position</label><input type="text" id="ePos">
+    <label>Telefon</label><input type="tel" id="eTel">
+    <div style="margin-top:14px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#888;margin-bottom:8px">Schichtplan</div>
+    <div class="daypick">
+      <button class="daybtn" data-d="0">Mo</button><button class="daybtn" data-d="1">Di</button>
+      <button class="daybtn" data-d="2">Mi</button><button class="daybtn" data-d="3">Do</button>
+      <button class="daybtn" data-d="4">Fr</button><button class="daybtn" data-d="5">Sa</button>
+      <button class="daybtn" data-d="6">So</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px">
+      <div style="flex:1"><label>Von</label><input type="time" id="sStart" value="08:00"></div>
+      <div style="flex:1"><label>Bis</label><input type="time" id="sEnd" value="17:00"></div>
+      <button class="sbtn btn-gray" style="padding:10px 14px" onclick="addShift()">+</button>
+    </div>
+    <div id="sPills"></div>
+    <div class="modal-acts">
+      <button class="sbtn btn-gray" style="flex:1;padding:12px" onclick="closeM('mEmp')">Abbrechen</button>
+      <button class="sbtn" style="flex:2;padding:12px;background:#CC0000;color:#fff" onclick="saveEmp()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mAdj">
+  <div class="modal">
+    <div class="modal-title">Anwesenheit anpassen</div>
+    <label>Mitarbeiter</label><select id="adjEmp"></select>
+    <label>Datum</label><input type="date" id="adjDate2">
+    <label>Status</label>
+    <select id="adjStat">
+      <option value="present">✅ Anwesend</option>
+      <option value="sick">🤒 Krank</option>
+      <option value="vacation">🌴 Urlaub</option>
+      <option value="homeoffice">🏠 Homeoffice</option>
+      <option value="absent">❌ Abwesend</option>
+    </select>
+    <label>Notiz</label><textarea id="adjNote" rows="2"></textarea>
+    <div class="modal-acts">
+      <button class="sbtn btn-gray" style="flex:1;padding:12px" onclick="closeM('mAdj')">Abbrechen</button>
+      <button class="sbtn" style="flex:2;padding:12px;background:#CC0000;color:#fff" onclick="saveAdj()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mUser">
+  <div class="modal">
+    <div class="modal-title" id="mUserTitle">Benutzer</div>
+    <label>Benutzername *</label><input type="text" id="uName">
+    <label>Passwort</label><input type="password" id="uPass" placeholder="Leer = unverändert">
+    <label>Rolle</label>
+    <select id="uRole" onchange="toggleDeptSelect()">
+      <option value="admin">Admin</option>
+      <option value="dept_head">Abteilungsleiter</option>
+      <option value="viewer">Betrachter</option>
+    </select>
+    <div id="uDeptWrap" style="display:none">
+      <label>Abteilung(en)</label>
+      <div id="uDeptCheckboxes" style="display:flex;flex-direction:column;gap:6px;margin-top:6px;max-height:220px;overflow-y:auto;padding-right:4px"></div>
+    </div>
+    <div class="modal-acts">
+      <button class="sbtn btn-gray" style="flex:1;padding:12px" onclick="closeM('mUser')">Abbrechen</button>
+      <button class="sbtn" style="flex:2;padding:12px;background:#CC0000;color:#fff" onclick="saveUser()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mDept">
+  <div class="modal">
+    <div class="modal-title">Abteilung anlegen</div>
+    <label>Name *</label><input type="text" id="dName">
+    <div class="modal-acts">
+      <button class="sbtn btn-gray" style="flex:1;padding:12px" onclick="closeM('mDept')">Abbrechen</button>
+      <button class="sbtn" style="flex:2;padding:12px;background:#CC0000;color:#fff" onclick="saveDept()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="mConfirm">
+  <div class="modal">
+    <div class="modal-title" id="mCTitle"></div>
+    <div id="mCMsg" style="color:#666;font-size:14px;line-height:1.6"></div>
+    <div class="modal-acts" id="mCBtns">
+      <button class="sbtn btn-gray" style="flex:1;padding:12px" onclick="closeM('mConfirm')">Abbrechen</button>
+      <button class="sbtn" style="flex:2;padding:12px;background:#CC0000;color:#fff" id="mCOk">OK</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ══ DATA ══════════════════════════════════════════════════════
+var D = {
+  users: [{"id": 1, "username": "Frank Fritsche", "password": "admin123", "role": "admin"}, {"id": 2, "username": "Christine Senden", "password": "api", "role": "viewer", "departments": []}, {"id": 19, "username": "Daniel Magney", "password": "api", "role": "dept_head", "departments": ["Controlling & Entwicklung"]}, {"id": 20, "username": "Julia Palmen", "password": "api", "role": "dept_head", "departments": ["Einkauf"]}, {"id": 21, "username": "Hamidi Loukili", "password": "api", "role": "dept_head", "departments": ["Einkauf"]}, {"id": 34, "username": "admin", "password": "admin123", "role": "admin"}, {"id": 35, "username": "viewer", "password": "viewer123", "role": "viewer", "departments": []}, {"id": 40, "username": "Christian Peters", "password": "api", "role": "dept_head", "departments": []}, {"id": 41, "username": "Andrea Kaufmann", "password": "api", "role": "dept_head", "departments": []}],
+  departments: [{"id": 1, "name": "Einkauf"}, {"id": 2, "name": "Controlling & Entwicklung"}, {"id": 8, "name": "Vertrieb"}, {"id": 9, "name": "Buchhaltung"}, {"id": 10, "name": "Backoffice"}, {"id": 11, "name": "BU S&D"}, {"id": 12, "name": "Personalverwaltung"}],
+  employees: [{"id": 1, "name": "Frank Fritsche", "department": "Einkauf", "position": "Geschäftsleitung Einkauf/Controlling", "phone": "0241-9170-5001"}, {"id": 2, "name": "Christine Senden", "department": "Einkauf", "position": "Assistenz der Geschäftsleitung", "phone": "0241-9170-1503"}, {"id": 3, "name": "Miriam Mertens", "department": "Einkauf", "position": "Assisten", "phone": "0241-9170-1515"}, {"id": 4, "name": "Michelle Schmidt", "department": "Einkauf", "position": "Einkaufsassistenz", "phone": "0241-9170-1525"}, {"id": 5, "name": "Cemil Meric", "department": "Einkauf", "position": "Produktmanager", "phone": "0241-9170-1514"}, {"id": 6, "name": "Abdullah Cakmak", "department": "Einkauf", "position": "Channel Manager", "phone": "0241-9170-1189"}, {"id": 7, "name": "Dirk Bartz", "department": "Einkauf", "position": "Teamleiter Einkauf", "phone": "0241-9170-1504"}, {"id": 8, "name": "Calvin Wollschläger", "department": "Einkauf", "position": "Produktmanager", "phone": "0241-9170-1548"}, {"id": 9, "name": "Nils Stockhausen", "department": "Einkauf", "position": "Azubi Einkauf", "phone": "0241-9170-1530"}, {"id": 10, "name": "Bodo Amkreutz", "department": "Einkauf", "position": "Produktmanager", "phone": "0241-9170-1519"}, {"id": 11, "name": "Robert Himisch", "department": "Einkauf", "position": "Produktmanager", "phone": "0241-9170-1507"}, {"id": 12, "name": "Benjamin Hegmann", "department": "Einkauf", "position": "Produktmanager", "phone": "0241-9170-1575"}, {"id": 13, "name": "Julia Palmen", "department": "Einkauf", "position": "Director Einkauf", "phone": "0241-9170-1518"}, {"id": 14, "name": "Salih Görgülü", "department": "Einkauf", "position": "Azubi Einkauf", "phone": "0241-9170-1587"}, {"id": 15, "name": "Samuel Schall", "department": "Einkauf", "position": "Produktmanager", "phone": "0241-9170-1526"}, {"id": 16, "name": "Atilla Cengiz", "department": "Einkauf", "position": "Teamleiter Einkauf", "phone": "0241-9170-1537"}, {"id": 17, "name": "Elias Cremer", "department": "Einkauf", "position": "Einkaufsassistenz", "phone": "0241-9170-1554"}, {"id": 18, "name": "Sarah Detilloux", "department": "Einkauf", "position": "Einkaufsassistenz", "phone": "0241-9170-1545"}, {"id": 19, "name": "Sebastian Machnitzke", "department": "Einkauf", "position": "Produktmanager", "phone": "0241-9170-1542"}, {"id": 20, "name": "Eric van de Sand", "department": "Einkauf", "position": "Produktmanager", "phone": "0241-9170-1571"}, {"id": 21, "name": "Sinan Uzun", "department": "Einkauf", "position": "Azubi Einkauf", "phone": "0241-9170-1592"}, {"id": 22, "name": "Janet Jarosch", "department": "Einkauf", "position": "Einkaufsassistenz", "phone": "0241-9170-1539"}, {"id": 23, "name": "Thomas Limbeck", "department": "Einkauf", "position": "Teamleiter Einkauf", "phone": "0241-9170-1516"}, {"id": 24, "name": "Fabian Kolbus", "department": "Einkauf", "position": "Produktmanager", "phone": "0241-9170-1556"}, {"id": 25, "name": "Hamidi Loukili", "department": "Einkauf", "position": "Einkaufsleitung", "phone": "0241-9170-1510"}, {"id": 26, "name": "Alexander Spilker", "department": "Einkauf", "position": "Azubi", "phone": "0241-9170-1557"}, {"id": 27, "name": "Alexander Kördel", "department": "Einkauf", "position": "Produkt Manager", "phone": "0241-9170-1573"}, {"id": 28, "name": "Carsten Wiescher", "department": "Controlling & Entwicklung", "position": "Entwickler", "phone": "0241-9170-1085"}, {"id": 29, "name": "Sebastian Erdweg", "department": "Controlling & Entwicklung", "position": "Entwickler", "phone": "0241-9170-1095"}, {"id": 30, "name": "Tim Göddertz", "department": "Controlling & Entwicklung", "position": "Entwickler", "phone": "0241-9170-1092"}, {"id": 31, "name": "Katharina Schipke", "department": "Controlling & Entwicklung", "position": "Controller", "phone": "0241-9170-1098"}, {"id": 32, "name": "Daniel Magney", "department": "Controlling & Entwicklung", "position": "Controlling Business Unit Manager", "phone": "0241-9170-1093"}, {"id": 33, "name": "Katharina Kladensky", "department": "Controlling & Entwicklung", "position": "Controller", "phone": "0241-9170-1083"}, {"id": 34, "name": "Ilir Ahmeti", "department": "Controlling & Entwicklung", "position": "Controller", "phone": "0241-9170-1081"}, {"id": 158, "name": "Hans-Peter Skobelj", "department": "Vertrieb", "position": "Senior Account Manager", "phone": "0241-9170-0"}, {"id": 159, "name": "Hans-Georg Oelschlegel", "department": "Vertrieb", "position": "Field Sales Manager South-East", "phone": "0241-9170-0"}, {"id": 160, "name": "Helena Katharina Hentze", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 161, "name": "Daniel Winand Drossart", "department": "Vertrieb", "position": "Focus Sales", "phone": "0241-9170-0"}, {"id": 162, "name": "Janet Herfs", "department": "Vertrieb", "position": "Mitarbeiter Projektteam", "phone": "0241-9170-0"}, {"id": 163, "name": "Luca Stöcker", "department": "Vertrieb", "position": "Mitarbeiter Projektteam", "phone": "0241-9170-0"}, {"id": 164, "name": "Sabine Schmidt", "department": "Vertrieb", "position": "Vertriebsassistenz", "phone": "0241-9170-0"}, {"id": 165, "name": "Jens Richter-Bahnen", "department": "Vertrieb", "position": "Verkaufsleiter", "phone": "0241-9170-0"}, {"id": 166, "name": "Tanju Karayigitler", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 167, "name": "David Winden", "department": "Vertrieb", "position": "Focus Sales", "phone": "0241-9170-0"}, {"id": 168, "name": "Doreen Ullrich", "department": "Vertrieb", "position": "Senior Key Account Manager", "phone": "0241-9170-0"}, {"id": 169, "name": "Andreas Krichel", "department": "Vertrieb", "position": "stellvertretender Verkaufsleiter", "phone": "0241-9170-0"}, {"id": 170, "name": "Joyce Lea Heinze", "department": "Vertrieb", "position": "Assistenz der Verkaufsleitung", "phone": "0241-9170-0"}, {"id": 171, "name": "Ralf Münch", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 172, "name": "Ulrich Vogel", "department": "Vertrieb", "position": "Field Sales Manager South West", "phone": "0241-9170-0"}, {"id": 173, "name": "Tim Halabi", "department": "Vertrieb", "position": "stellvertretender Verkaufsleiter", "phone": "0241-9170-0"}, {"id": 174, "name": "Lukas Knaub", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 175, "name": "Dean Witt", "department": "Vertrieb", "position": "Business Development Manager", "phone": "0241-9170-0"}, {"id": 176, "name": "Stefan Pilz", "department": "Vertrieb", "position": "Senior Account Manager", "phone": "0241-9170-0"}, {"id": 177, "name": "Frank Amberg", "department": "Vertrieb", "position": "Teamleiter Shop Team", "phone": "0241-9170-0"}, {"id": 178, "name": "Nabil Ouaziz", "department": "Vertrieb", "position": "Account Manager", "phone": "0241-9170-0"}, {"id": 179, "name": "Moritz Pozimski", "department": "Vertrieb", "position": "Azubi IT-Systemmanagement", "phone": "0241-9170-0"}, {"id": 180, "name": "Paulo Simoes Faria Dias", "department": "Vertrieb", "position": "Senior Key Account Manager", "phone": "0241-9170-0"}, {"id": 181, "name": "Marcus Bonn", "department": "Vertrieb", "position": "Senior Key Account Manager", "phone": "0241-9170-0"}, {"id": 182, "name": "Oguzhan Nalcioglu", "department": "Vertrieb", "position": "Account Manager IT-Security", "phone": "0241-9170-0"}, {"id": 183, "name": "Andreas Becher", "department": "Vertrieb", "position": "Verkaufsleiter", "phone": "0241-9170-0"}, {"id": 184, "name": "Joelle Van Roy", "department": "Vertrieb", "position": "Focus Sales", "phone": "0241-9170-0"}, {"id": 185, "name": "Beytullah Balaban", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 186, "name": "Ingo Stollenwerk", "department": "Vertrieb", "position": "Verkaufsleiter", "phone": "0241-9170-0"}, {"id": 187, "name": "Dennis Schrey", "department": "Vertrieb", "position": "Senior Key Account Manager", "phone": "0241-9170-0"}, {"id": 188, "name": "Christopher Zenke", "department": "Vertrieb", "position": "Verkaufsleiter", "phone": "0241-9170-0"}, {"id": 189, "name": "Lara Hiller", "department": "Vertrieb", "position": "Vertiebsassistenz", "phone": "0241-9170-0"}, {"id": 190, "name": "Oliver Wollny", "department": "Vertrieb", "position": "Head of Field Sales", "phone": "0241-9170-0"}, {"id": 191, "name": "Rene Herbst", "department": "Vertrieb", "position": "Verkaufsleiter", "phone": "0241-9170-0"}, {"id": 192, "name": "Mert Sengüler", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 193, "name": "Sedef Alagöz", "department": "Vertrieb", "position": "Vertriebsassistenz", "phone": "0241-9170-0"}, {"id": 194, "name": "Tobias Eisenbeis", "department": "Vertrieb", "position": "Pre-Sales Consultant", "phone": "0241-9170-0"}, {"id": 195, "name": "Ramona Hahne", "department": "Vertrieb", "position": "Vertriebstrainer", "phone": "0241-9170-0"}, {"id": 196, "name": "Felix Rudolph", "department": "Vertrieb", "position": "Azubi IT-Systemmanagement", "phone": "0241-9170-0"}, {"id": 197, "name": "Melina Messias", "department": "Vertrieb", "position": "Business Unit Sales", "phone": "0241-9170-0"}, {"id": 198, "name": "Michael Thönnissen", "department": "Vertrieb", "position": "Focus Sales", "phone": "0241-9170-0"}, {"id": 199, "name": "Yannick Neubauer", "department": "Vertrieb", "position": "Senior Account Manager", "phone": "0241-9170-0"}, {"id": 200, "name": "Julia Gregoire", "department": "Vertrieb", "position": "Leiterin Sales Unit", "phone": "0241-9170-0"}, {"id": 201, "name": "Georgios Papadopoulos", "department": "Vertrieb", "position": "Senior Account Manager", "phone": "0241-9170-0"}, {"id": 202, "name": "Jacqueline Laurent", "department": "Vertrieb", "position": "stellvertretender Verkaufsleiter", "phone": "0241-9170-0"}, {"id": 203, "name": "Ceren Abay", "department": "Vertrieb", "position": "Vertriebsassistenz", "phone": "0241-9170-0"}, {"id": 204, "name": "Denise Berndt", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 205, "name": "Thorsten Bosch", "department": "Vertrieb", "position": "Business Development Manager", "phone": "0241-9170-0"}, {"id": 206, "name": "Alexander Breuer", "department": "Vertrieb", "position": "Mitarbeiter Projektteam", "phone": "0241-9170-0"}, {"id": 207, "name": "Ben Conrads", "department": "Vertrieb", "position": "Pre-Sales Consultant", "phone": "0241-9170-0"}, {"id": 208, "name": "Ralf Dahl", "department": "Vertrieb", "position": "Senior Key Account Manager", "phone": "0241-9170-0"}, {"id": 209, "name": "Michel Dörendahl", "department": "Vertrieb", "position": "Produktmanager", "phone": "0241-9170-0"}, {"id": 210, "name": "Roger Emonds-Pool", "department": "Vertrieb", "position": "Business Development Manager", "phone": "0241-9170-0"}, {"id": 211, "name": "Markus Eschweiler", "department": "Vertrieb", "position": "Account Manager", "phone": "0241-9170-0"}, {"id": 212, "name": "Julia Eßer", "department": "Vertrieb", "position": "Account Manager", "phone": "0241-9170-0"}, {"id": 213, "name": "Daniel Fornaroli", "department": "Vertrieb", "position": "Account Manager", "phone": "0241-9170-0"}, {"id": 214, "name": "Sabine Gebers", "department": "Vertrieb", "position": "Field Sales Manager North", "phone": "0241-9170-0"}, {"id": 215, "name": "Angelika Gerdes", "department": "Vertrieb", "position": "Vertriebsassistenz", "phone": "0241-9170-0"}, {"id": 216, "name": "Andreas Grotthaus", "department": "Vertrieb", "position": "Senior Key Account Manager", "phone": "0241-9170-0"}, {"id": 217, "name": "Jan Grotthaus", "department": "Vertrieb", "position": "Senior Account Manager", "phone": "0241-9170-0"}, {"id": 218, "name": "Holger Hänsch", "department": "Vertrieb", "position": "Account Manager", "phone": "0241-9170-0"}, {"id": 219, "name": "Rene Haupt", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 220, "name": "Manuela Höregott", "department": "Vertrieb", "position": "Vertriebsassistenz", "phone": "0241-9170-0"}, {"id": 221, "name": "Dirk Hüdepohl", "department": "Vertrieb", "position": "Mitarbeiter Financial Service", "phone": "0241-9170-0"}, {"id": 222, "name": "Karsten Kahlen", "department": "Vertrieb", "position": "Verkaufsleiter", "phone": "0241-9170-0"}, {"id": 223, "name": "Nicole Kahlen", "department": "Vertrieb", "position": "Senior Account Manager", "phone": "0241-9170-0"}, {"id": 224, "name": "Jonas Koffer", "department": "Vertrieb", "position": "Focus Sales", "phone": "0241-9170-0"}, {"id": 225, "name": "Ulrich Kreutzer", "department": "Vertrieb", "position": "Senior Account Manager", "phone": "0241-9170-0"}, {"id": 226, "name": "Oliver Krott", "department": "Vertrieb", "position": "Verkaufsleiter", "phone": "0241-9170-0"}, {"id": 227, "name": "Bettina Künzel", "department": "Vertrieb", "position": "Mitarbeiter Shop & Content Team", "phone": "0241-9170-0"}, {"id": 228, "name": "Alexandre Müllender", "department": "Vertrieb", "position": "Senior Key Account Manager", "phone": "0241-9170-0"}, {"id": 229, "name": "Patrizia Niemira", "department": "Vertrieb", "position": "Mitarbeiter Shop & Content Team", "phone": "0241-9170-0"}, {"id": 230, "name": "Hermann-Josef Otten", "department": "Vertrieb", "position": "Field Sales Manager", "phone": "0241-9170-0"}, {"id": 231, "name": "Jorien Postler", "department": "Vertrieb", "position": "Vertriebsassistenz", "phone": "0241-9170-0"}, {"id": 232, "name": "Faton Rama", "department": "Vertrieb", "position": "Focus Sales", "phone": "0241-9170-0"}, {"id": 233, "name": "Bern Schulte-Hillen", "department": "Vertrieb", "position": "Business Development Manager", "phone": "0241-9170-0"}, {"id": 234, "name": "Christoph Schultz", "department": "Vertrieb", "position": "Focus Sales", "phone": "0241-9170-0"}, {"id": 235, "name": "Ahmet Ünal", "department": "Vertrieb", "position": "Senior Key Account Manager", "phone": "0241-9170-0"}, {"id": 236, "name": "Tjark Lennart Wendtland", "department": "Vertrieb", "position": "Pre-Sales Consultant", "phone": "0241-9170-0"}, {"id": 237, "name": "Jessica Benner", "department": "Vertrieb", "position": "kaufmännischer Mitarbeiter", "phone": "0241-9170-0"}, {"id": 238, "name": "Christian Bräuer", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 239, "name": "Marcel Brausten", "department": "Vertrieb", "position": "Mitarbeiter Shop & Content Team", "phone": "0241-9170-0"}, {"id": 240, "name": "Karim Chekrouni", "department": "Vertrieb", "position": "Senior Account Manager", "phone": "0241-9170-0"}, {"id": 241, "name": "Nils Dahmen", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 242, "name": "Yannick Diederen", "department": "Vertrieb", "position": "Senior Account Manager", "phone": "0241-9170-0"}, {"id": 243, "name": "Konrad Ebis", "department": "Vertrieb", "position": "Azubi IT-Systemmanagement", "phone": "0241-9170-0"}, {"id": 244, "name": "Dilara Ergün", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 245, "name": "Kai Gerhold", "department": "Vertrieb", "position": "Azubi IT-Systemmanagement", "phone": "0241-9170-0"}, {"id": 246, "name": "Hussein Halabi", "department": "Vertrieb", "position": "Senior Key Account Manager", "phone": "0241-9170-0"}, {"id": 247, "name": "Fabio Hammel", "department": "Vertrieb", "position": "Vertriebsassistenz", "phone": "0241-9170-0"}, {"id": 248, "name": "Maximilian Hauten", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 249, "name": "Andre Hemforth", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 250, "name": "Komsan Dieter Henn", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 251, "name": "Nils Heusch", "department": "Vertrieb", "position": "Focus Sales", "phone": "0241-9170-0"}, {"id": 252, "name": "Kristina Huber", "department": "Vertrieb", "position": "Assistenz der Vertriebsleitung", "phone": "0241-9170-0"}, {"id": 253, "name": "David Luis Jäger", "department": "Vertrieb", "position": "Assistenz VAD", "phone": "0241-9170-0"}, {"id": 254, "name": "Ömer Kantürk", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 255, "name": "Marcel Kerkhoff", "department": "Vertrieb", "position": "Distributionsbetreuer", "phone": "0241-9170-0"}, {"id": 256, "name": "Wolfgang Werner Knothe", "department": "Vertrieb", "position": "Field Sales Manager South-West", "phone": "0241-9170-0"}, {"id": 257, "name": "Magdalena Krämer", "department": "Vertrieb", "position": "Assistenz VAD", "phone": "0241-9170-0"}, {"id": 258, "name": "Turhan Kundek", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 259, "name": "Kim Lantermann", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 260, "name": "Abdelrahim Latiris", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 261, "name": "Dagmar Lentz", "department": "Vertrieb", "position": "Assistenz VAD", "phone": "0241-9170-0"}, {"id": 262, "name": "Thomas Leuchtenberg", "department": "Vertrieb", "position": "Senior Account Manager", "phone": "0241-9170-0"}, {"id": 263, "name": "Gernot Louis", "department": "Vertrieb", "position": "Fokus Sales", "phone": "0241-9170-0"}, {"id": 264, "name": "Jonathan Mbenga", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 265, "name": "Ilias Moussadek", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 266, "name": "Andreas Nimphius", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 267, "name": "Hakan Örenbas", "department": "Vertrieb", "position": "Account Manager IT-Security", "phone": "0241-9170-0"}, {"id": 268, "name": "Alexandros Nikolaos Pantazis", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 269, "name": "Gina Prepols", "department": "Vertrieb", "position": "Vertriebsassistenz", "phone": "0241-9170-0"}, {"id": 270, "name": "Michel Rene Rensinghoff", "department": "Vertrieb", "position": "Senior Account Manager", "phone": "0241-9170-0"}, {"id": 271, "name": "Niklas Riege", "department": "Vertrieb", "position": "Vertriebsassistenz", "phone": "0241-9170-0"}, {"id": 272, "name": "Michael Schönberger", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 273, "name": "Lazar Sejdic", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 274, "name": "Holger Sprang", "department": "Vertrieb", "position": "Focus Sales", "phone": "0241-9170-0"}, {"id": 275, "name": "Jalil Tahir", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 276, "name": "Diana Trisic", "department": "Vertrieb", "position": "Assistenz der Vertriebsleitung", "phone": "0241-9170-0"}, {"id": 277, "name": "Burak Ünver", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 278, "name": "Dustin Wagner", "department": "Vertrieb", "position": "Focus Sales", "phone": "0241-9170-0"}, {"id": 279, "name": "Adrian Waltl", "department": "Vertrieb", "position": "Vertriebsassistenz", "phone": "0241-9170-0"}, {"id": 280, "name": "Gabriel Samuel Kulan", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 281, "name": "Tolga Bal", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 282, "name": "Thi-Hang Nguyen", "department": "Vertrieb", "position": "Assistenz der Vertriebsleitung", "phone": "0241-9170-0"}, {"id": 283, "name": "Florian Hampel", "department": "Vertrieb", "position": "Field Sales Manager South East", "phone": "0241-9170-0"}, {"id": 284, "name": "Nadja Lange", "department": "Vertrieb", "position": "Mitarbeiterin Shop & Content Team", "phone": "0241-9170-0"}, {"id": 285, "name": "Denny Ksellmann", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 286, "name": "Markus Henseler", "department": "Vertrieb", "position": "Produktmanager", "phone": "0241-9170-0"}, {"id": 287, "name": "Jens Walther", "department": "Vertrieb", "position": "Vertriebsassistenz", "phone": "0241-9170-0"}, {"id": 288, "name": "Sonja Klyta", "department": "Vertrieb", "position": "kaufmännischer Mitarbeiter", "phone": "0241-9170-0"}, {"id": 289, "name": "Janning Leander Krumm", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 290, "name": "Nassim Hbiyel", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 291, "name": "Ethem Ömeroglu", "department": "Vertrieb", "position": "Azubi IT-Systemmanagement", "phone": "0241-9170-0"}, {"id": 292, "name": "Muhammed Can Tekcan", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 293, "name": "Juan Wiegand", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 294, "name": "Eric Dovern", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 295, "name": "Noah Kocksch", "department": "Vertrieb", "position": "Azubi Groß-/Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 296, "name": "Vladimiros Iliopoulos", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 297, "name": "Simon Iden", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}, {"id": 298, "name": "Arigon Morina", "department": "Vertrieb", "position": "stellvertretender Verkaufsleiter", "phone": "0241-9170-0"}, {"id": 299, "name": "Laura Chiara Vella", "department": "Vertrieb", "position": "Azubi Groß- und Außenhandelsmanagement", "phone": "0241-9170-0"}, {"id": 300, "name": "Raphael Defruytier", "department": "Vertrieb", "position": "Inside Sales", "phone": "0241-9170-0"}],
+  shifts: [{"id": 1, "eid": 6, "day": 0, "s": "08:00", "e": "17:00"}, {"id": 2, "eid": 6, "day": 0, "s": "08:00", "e": "17:00"}],
+  adjustments: [{"id": 1, "eid": 1, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 2, "eid": 2, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 3, "eid": 3, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 4, "eid": 4, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 5, "eid": 5, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 6, "eid": 6, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 7, "eid": 7, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 8, "eid": 8, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 9, "eid": 9, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 10, "eid": 10, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 11, "eid": 11, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 12, "eid": 12, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 13, "eid": 13, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 14, "eid": 14, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 15, "eid": 15, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 16, "eid": 16, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 17, "eid": 17, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 18, "eid": 18, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 19, "eid": 19, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 20, "eid": 20, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 21, "eid": 21, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 22, "eid": 22, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 23, "eid": 23, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 24, "eid": 24, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 25, "eid": 25, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 26, "eid": 26, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 27, "eid": 27, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 28, "eid": 28, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 29, "eid": 29, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 30, "eid": 30, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 31, "eid": 31, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 32, "eid": 32, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 33, "eid": 33, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 34, "eid": 34, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 35, "eid": 158, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 36, "eid": 159, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 37, "eid": 160, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 38, "eid": 161, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 39, "eid": 162, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 40, "eid": 163, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 41, "eid": 164, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 42, "eid": 165, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 43, "eid": 166, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 44, "eid": 167, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 45, "eid": 168, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 46, "eid": 169, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 47, "eid": 170, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 48, "eid": 171, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 49, "eid": 172, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 50, "eid": 173, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 51, "eid": 174, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 52, "eid": 175, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 53, "eid": 176, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 54, "eid": 177, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 55, "eid": 178, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 56, "eid": 179, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 57, "eid": 180, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 58, "eid": 181, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 59, "eid": 182, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 60, "eid": 183, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 61, "eid": 184, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 62, "eid": 185, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 63, "eid": 186, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 64, "eid": 187, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 65, "eid": 188, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 66, "eid": 189, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 67, "eid": 190, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 68, "eid": 191, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 69, "eid": 192, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 70, "eid": 193, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 71, "eid": 194, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 72, "eid": 195, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 73, "eid": 196, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 74, "eid": 197, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 75, "eid": 198, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 76, "eid": 199, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 77, "eid": 200, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 78, "eid": 201, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 79, "eid": 202, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 80, "eid": 203, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 81, "eid": 204, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 82, "eid": 205, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 83, "eid": 206, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 84, "eid": 207, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 85, "eid": 208, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 86, "eid": 209, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 87, "eid": 210, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 88, "eid": 211, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 89, "eid": 212, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 90, "eid": 213, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 91, "eid": 214, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 92, "eid": 215, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 93, "eid": 216, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 94, "eid": 217, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 95, "eid": 218, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 96, "eid": 219, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 97, "eid": 220, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 98, "eid": 221, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 99, "eid": 222, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 100, "eid": 223, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 101, "eid": 224, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 102, "eid": 225, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 103, "eid": 226, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 104, "eid": 227, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 105, "eid": 228, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 106, "eid": 229, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 107, "eid": 230, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 108, "eid": 231, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 109, "eid": 232, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 110, "eid": 233, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 111, "eid": 234, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 112, "eid": 235, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 113, "eid": 236, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 114, "eid": 237, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 115, "eid": 238, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 116, "eid": 239, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 117, "eid": 240, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 118, "eid": 241, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 119, "eid": 242, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 120, "eid": 243, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 121, "eid": 244, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 122, "eid": 245, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 123, "eid": 246, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 124, "eid": 247, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 125, "eid": 248, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 126, "eid": 249, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 127, "eid": 250, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 128, "eid": 251, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 129, "eid": 252, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 130, "eid": 253, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 131, "eid": 254, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 132, "eid": 255, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 133, "eid": 256, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 134, "eid": 257, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 135, "eid": 258, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 136, "eid": 259, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 137, "eid": 260, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 138, "eid": 261, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 139, "eid": 262, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 140, "eid": 263, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 141, "eid": 264, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 142, "eid": 265, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 143, "eid": 266, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 144, "eid": 267, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 145, "eid": 268, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 146, "eid": 269, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 147, "eid": 270, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 148, "eid": 271, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 149, "eid": 272, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 150, "eid": 273, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 151, "eid": 274, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 152, "eid": 275, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 153, "eid": 276, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 154, "eid": 277, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 155, "eid": 278, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 156, "eid": 279, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 157, "eid": 280, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 158, "eid": 281, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 159, "eid": 282, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 160, "eid": 283, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 161, "eid": 284, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 162, "eid": 285, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 163, "eid": 286, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 164, "eid": 287, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 165, "eid": 288, "date": "2026-06-08", "status": "absent", "note": ""}, {"id": 166, "eid": 289, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 167, "eid": 290, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 168, "eid": 291, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 169, "eid": 292, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 170, "eid": 293, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 171, "eid": 294, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 172, "eid": 295, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 173, "eid": 296, "date": "2026-06-08", "status": "homeoffice", "note": ""}, {"id": 174, "eid": 297, "date": "2026-06-08", "status": "sick", "note": ""}, {"id": 175, "eid": 298, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 176, "eid": 299, "date": "2026-06-08", "status": "present", "note": ""}, {"id": 177, "eid": 300, "date": "2026-06-08", "status": "sick", "note": ""}],
+  alarms: [],
+  checkins: [],
+  nid: {emp:301,shift:3,adj:178,alarm:1,user:42,dept:13}
+};
+
+// Load saved data from localStorage (never overwrite built-in users)
+// Clear old cache keys
+try { 
+  ['feueralarm_db','fa2_db','fa3_db','fa3'].forEach(function(k){ localStorage.removeItem(k); });
+  // If fa4 has empty adjustments, delete it so built-in data is used
+  var _old = localStorage.getItem('fa4');
+  if (_old) {
+    var _oldData = JSON.parse(_old);
+    var _today = new Date().toISOString().slice(0,10);
+    var _hasToday = _oldData.adjustments && _oldData.adjustments.some(function(a){ return a.date===_today; });
+    if (!_hasToday) { localStorage.removeItem('fa4'); }
+  }
+} catch(e) {}
+var _bu = JSON.parse(JSON.stringify(D.users));
+var _buAdj = JSON.parse(JSON.stringify(D.adjustments));
+try {
+  var _sv = localStorage.getItem('fa4');
+  if (_sv) {
+    var _tmp = JSON.parse(_sv);
+    if (_tmp.employees)    D.employees    = _tmp.employees;
+    if (_tmp.shifts)       D.shifts       = _tmp.shifts;
+    if (_tmp.departments)  D.departments  = _tmp.departments;
+    // Only load adjustments from localStorage if they exist AND are for today
+    if (_tmp.adjustments && _tmp.adjustments.length > 0) {
+      var today = new Date().toISOString().slice(0,10);
+      var hasToday = _tmp.adjustments.some(function(a){ return a.date === today; });
+      D.adjustments = hasToday ? _tmp.adjustments : _buAdj;
+    }
+    if (_tmp.alarms)       D.alarms       = _tmp.alarms;
+    if (_tmp.checkins)     D.checkins     = _tmp.checkins;
+    if (_tmp.nid)          D.nid          = _tmp.nid;
+    if (_tmp.users) {
+      var _extra = _tmp.users.filter(function(u) {
+        return !_bu.find(function(x) { return x.username === u.username; });
+      });
+      D.users = _bu.concat(_extra);
+    }
+  }
+} catch(e) {}
+
+function save() {
+  try { 
+    localStorage.setItem('fa4', JSON.stringify(D)); 
+  } catch(e) {
+    // localStorage not available (e.g. iPhone local file) - data stays in memory
+  }
+}
+function nid(k) { var i = D.nid[k]||1; D.nid[k] = i+1; return i; }
+
+// ══ AUTH ══════════════════════════════════════════════════════
+var CU = null;
+
+function doLogin() {
+  var u = document.getElementById('lu').value.trim();
+  var p = document.getElementById('lp').value;
+  var user = D.users.find(function(x) { return x.username===u && x.password===p; });
+  if (!user) {
+    document.getElementById('lerr').textContent = 'Falsche Anmeldedaten';
+    return;
+  }
+  CU = user;
+  document.getElementById('lerr').textContent = '';
+  // Hide login, show app
+  document.getElementById('pg-login').style.display = 'none';
+  document.getElementById('pg-app').style.display = 'flex';
+  document.getElementById('pg-app').style.flexDirection = 'column';
+  document.getElementById('pg-app').style.minHeight = '100vh';
+  document.getElementById('bottomNav').style.display = 'flex';
+  document.getElementById('topUser').textContent = user.username;
+  // Show/hide admin tabs
+  var isAdmin = user.role === 'admin';
+  // Bottom nav visibility based on role
+  var bnEmp   = document.getElementById('bn-emp');
+  var bnAdj   = document.getElementById('bn-adj');
+  var bnAdmin = document.getElementById('bn-admin');
+  if (bnEmp)   bnEmp.style.display   = isAdmin ? 'flex' : 'none';
+  if (bnAdj)   bnAdj.style.display   = isAdmin ? 'flex' : 'none';
+  if (bnAdmin) bnAdmin.style.display = isAdmin ? 'flex' : 'none';
+  // Update CU with departments from D.users (in case loaded from localStorage)
+  var freshUser = D.users.find(function(u){ return u.id === user.id; });
+  if (freshUser) CU = freshUser;
+  showTab('home');
+}
+
+document.getElementById('lu').addEventListener('keydown', function(e) { if(e.key==='Enter') document.getElementById('lp').focus(); });
+document.getElementById('lp').addEventListener('keydown', function(e) { if(e.key==='Enter') doLogin(); });
+
+
+
+function doLogout() {
+  CU = null;
+  document.getElementById('pg-app').style.display = 'none';
+  document.getElementById('pg-login').style.display = 'flex';
+  document.getElementById('bottomNav').style.display = 'none';
+  document.getElementById('lu').value = '';
+  document.getElementById('lp').value = '';
+}
+
+// ══ CLOCK ═════════════════════════════════════════════════════
+function tick() {
+  var now = new Date();
+  var days = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+  var months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  var d = document.getElementById('topDate');
+  var t = document.getElementById('topTime');
+  if (d) d.textContent = days[now.getDay()]+', '+now.getDate()+'. '+months[now.getMonth()]+' '+now.getFullYear();
+  if (t) t.textContent = now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
+}
+tick(); setInterval(tick, 10000);
+
+// ══ TABS ══════════════════════════════════════════════════════
+var PAGES = ['home','alarm','emp','adj','depts','hist','admin'];
+function showTab(name) {
+  PAGES.forEach(function(p) {
+    var el = document.getElementById('pg-'+p);
+    if (el) el.className = 'pg';
+  });
+  var el = document.getElementById('pg-'+name);
+  if (el) el.className = 'pg on';
+  document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('on'); });
+  document.querySelectorAll('.tab').forEach(function(t) {
+    if (t.getAttribute('onclick') === "showTab('"+name+"')") t.classList.add('on');
+  });
+  // Update bottom nav
+  document.querySelectorAll('.bn-btn').forEach(function(b) { b.classList.remove('active'); });
+  var bnBtn = document.getElementById('bn-'+name);
+  if (bnBtn) bnBtn.classList.add('active');
+  if (name==='home')  loadHome();
+  if (name==='alarm') loadAlarm();
+  if (name==='emp')   renderEmps();
+  if (name==='adj')   { document.getElementById('adjDateIn').value=today(); renderAdjs(); }
+  if (name==='depts') { deptDate=new Date(); renderDepts(); }
+  if (name==='hist')  renderHist();
+  if (name==='admin') { renderUsers(); renderDeptAdmin(); }
+}
+
+// ══ PRESENCE ══════════════════════════════════════════════════
+function getPresent(dt) {
+  dt = dt || new Date();
+  var ds = dt.toISOString().slice(0,10);
+  var wd = dt.getDay()===0 ? 6 : dt.getDay()-1;
+  var tm = dt.toTimeString().slice(0,5);
+  var result=[], seen={};
+  D.shifts.forEach(function(s) {
+    if (s.day===wd && s.s<=tm && s.e>tm) {
+      var emp = D.employees.find(function(e) { return e.id===s.eid; });
+      if (emp && !seen[emp.id]) {
+        var adj = D.adjustments.find(function(a) { return a.eid===emp.id && a.date===ds; });
+        if (adj && adj.status!=='present') return;
+        seen[emp.id]=1;
+        result.push(Object.assign({},emp,{reason:adj?adj.status:'shift',ss:s.s,se:s.e}));
+      }
+    }
+  });
+  D.adjustments.filter(function(a) { return a.date===ds && a.status==='present'; }).forEach(function(a) {
+    if (!seen[a.eid]) {
+      var emp = D.employees.find(function(e) { return e.id===a.eid; });
+      if (emp) { seen[a.eid]=1; result.push(Object.assign({},emp,{reason:'manual'})); }
+    }
+  });
+  return result;
+}
+
+// ══ HOME ══════════════════════════════════════════════════════
+function loadHome() {
+  var now = new Date();
+  var alarm = D.alarms.find(function(a) { return !a.resolved; });
+  var today = now.toISOString().slice(0,10);
+  document.getElementById('pTime').textContent = now.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr';
+
+  // Count total present
+  var adjMap = {};
+  D.adjustments.filter(function(a){return a.date===today;}).forEach(function(a){adjMap[a.eid]=a.status;});
+  var totalPresent = D.employees.filter(function(e){return adjMap[e.id]==='present';}).length;
+  document.getElementById('pCount').textContent = totalPresent;
+
+  if (alarm) {
+    document.getElementById('alarmBanner').style.display='block';
+    document.getElementById('mainAlarmBtn').classList.add('orange');
+    document.getElementById('abt').textContent='ZUR EVAKUIERUNGSLISTE';
+    document.getElementById('abs').textContent='Alarm ist aktiv';
+  } else {
+    document.getElementById('alarmBanner').style.display='none';
+    document.getElementById('mainAlarmBtn').classList.remove('orange');
+    document.getElementById('abt').textContent='FEUERALARM';
+    document.getElementById('abs').textContent='Anwesenheitsliste erstellen';
+  }
+
+  renderDeptCards(today, 'pList', function(dept) {
+    showDeptDetail(dept, today, 'home');
+  });
+}
+
+function renderDeptCards(dateStr, containerId, onClickFn) {
+  var adjMap = {};
+  D.adjustments.filter(function(a){return a.date===dateStr;}).forEach(function(a){adjMap[a.eid]=a.status;});
+
+  // Filter employees by user's allowed departments
+  var userDepts = getUserDepts();
+  var allowedEmps = D.employees.filter(function(emp){
+    if (!userDepts) return true;
+    return userDepts.indexOf(emp.department||'Sonstige') !== -1;
+  });
+
+  var deptMap = {};
+  allowedEmps.forEach(function(emp){
+    var dept = emp.department || 'Sonstige';
+    if (!deptMap[dept]) deptMap[dept] = {present:0,homeoffice:0,sick:0,vacation:0,absent:0,none:0,total:0};
+    deptMap[dept].total++;
+    deptMap[dept][adjMap[emp.id]||'none']++;
+  });
+
+  var container = document.getElementById(containerId);
+  container.innerHTML = '';
+  Object.keys(deptMap).sort().forEach(function(dept){
+    var d = deptMap[dept];
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.style.cssText = 'flex-direction:column;align-items:flex-start;gap:10px;padding:16px;cursor:pointer;transition:box-shadow .15s';
+    card.onmouseover = function(){this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)';};
+    card.onmouseout  = function(){this.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';};
+
+    var pills = '';
+    if(d.present)    pills += '<span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:20px;background:#e8f5e9;color:#2e7d32">✅ '+d.present+' Anwesend</span>';
+    if(d.homeoffice) pills += '<span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:20px;background:#f3e5f5;color:#6a1b9a">🏠 '+d.homeoffice+' Homeoffice</span>';
+    if(d.sick)       pills += '<span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:20px;background:#ffebee;color:#c62828">🤒 '+d.sick+' Krank</span>';
+    if(d.vacation)   pills += '<span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:20px;background:#e3f2fd;color:#1565c0">🌴 '+d.vacation+' Urlaub</span>';
+    if(d.absent)     pills += '<span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:20px;background:#f5f5f5;color:#37474f">❌ '+d.absent+' Abwesend</span>';
+    if(d.none)       pills += '<span style="font-size:13px;font-weight:600;padding:5px 12px;border-radius:20px;background:#f0f0f0;color:#aaa">— '+d.none+' Kein Status</span>';
+
+    card.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;width:100%">' +
+        '<div style="font-size:15px;font-weight:700;color:#1a1a2e">'+h(dept)+'</div>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<div style="font-size:12px;color:#aaa">'+d.total+' Mitarbeiter</div>' +
+          '<span style="color:#aaa;font-size:18px">›</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">'+pills+'</div>';
+
+    card.addEventListener('click', (function(dp){ return function(){ onClickFn(dp); }; })(dept));
+    container.appendChild(card);
+  });
+}
+
+// Detail view: show all employees of a dept
+function showDeptDetail(dept, dateStr, returnTab) {
+  var adjMap = {};
+  D.adjustments.filter(function(a){return a.date===dateStr;}).forEach(function(a){adjMap[a.eid]=a.status;});
+  var userDepts = getUserDepts();
+  var emps = D.employees.filter(function(e){
+    if (userDepts && userDepts.indexOf(e.department||'Sonstige') === -1) return false;
+    return (e.department||'Sonstige')===dept;
+  });
+  var ST = {present:{label:'✅ Anwesend',color:'#2e7d32',bg:'#e8f5e9'},sick:{label:'🤒 Krank',color:'#c62828',bg:'#ffebee'},vacation:{label:'🌴 Urlaub',color:'#1565c0',bg:'#e3f2fd'},homeoffice:{label:'🏠 Homeoffice',color:'#6a1b9a',bg:'#f3e5f5'},absent:{label:'❌ Abwesend',color:'#37474f',bg:'#f5f5f5'}};
+
+  // Build detail panel
+  var container = document.getElementById('pList');
+  container.innerHTML = '';
+
+  // Back button + title
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:16px';
+  var backBtn = document.createElement('button');
+  backBtn.className = 'sbtn btn-gray';
+  backBtn.textContent = '← Zurück';
+  backBtn.addEventListener('click', function(){ loadHome(); });
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:17px;font-weight:700;color:#1a1a2e';
+  title.textContent = dept;
+  var count = document.createElement('div');
+  count.style.cssText = 'font-size:13px;color:#aaa;margin-left:auto';
+  count.textContent = emps.length + ' Mitarbeiter';
+  header.appendChild(backBtn);
+  header.appendChild(title);
+  header.appendChild(count);
+  container.appendChild(header);
+
+  // Employee cards
+  emps.forEach(function(emp){
+    var st = adjMap[emp.id] || null;
+    var cfg = st ? ST[st] : null;
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML =
+      '<div class="ci">' +
+        '<div class="cn">'+h(emp.name)+'</div>' +
+        '<div class="cd">'+(emp.position?h(emp.position):'')+(emp.phone?' · 📞'+h(emp.phone):'')+'</div>' +
+      '</div>' +
+      (cfg
+        ? '<span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:'+cfg.bg+';color:'+cfg.color+'">'+cfg.label+'</span>'
+        : '<span style="font-size:12px;color:#bbb">Kein Status</span>');
+    // Click to change status (admin only)
+    if (CU && CU.role === 'admin') {
+      card.style.cursor = 'pointer';
+      card.addEventListener('click', (function(eid, ds){ return function(){ openDeptCard(eid, ds); renderDeptDetailAfterChange(dept, ds); }; })(emp.id, dateStr));
+    }
+    container.appendChild(card);
+  });
+}
+
+function renderDeptDetailAfterChange(dept, dateStr) {
+  // Called after status change to re-render
+  setTimeout(function(){ showDeptDetail(dept, dateStr, 'home'); }, 100);
+}
+
+
+function alarmClick() {
+  var alarm = D.alarms.find(function(a) { return !a.resolved; });
+  if (alarm) { showTab('alarm'); return; }
+  confirm2('🔥 FEUERALARM AUSLÖSEN','Evakuierungsliste für alle anwesenden Mitarbeiter erstellen?',function() {
+    var present = getPresent(new Date());
+    var snap = present;
+    var userDepts = getUserDepts();
+    if (userDepts) snap = present.filter(function(e){ return userDepts.indexOf(e.department) !== -1; });
+    var alarmDepts = userDepts || D.departments.map(function(d){ return d.name; });
+    D.alarms.push({id:nid('alarm'),at:new Date().toISOString(),by:CU.username,resolved:null,snap:JSON.parse(JSON.stringify(snap)),depts:alarmDepts});
+    save(); toast('Alarm ausgelöst!','err'); showTab('alarm');
+  });
+}
+
+// ══ ALARM ═════════════════════════════════════════════════════
+function getUserDepts() {
+  if (!CU || CU.role === 'admin') return null; // null = all depts
+  if (CU.departments && CU.departments.length) return CU.departments;
+  // Fallback: find employee with same name
+  var emp = D.employees.find(function(e) { return e.name === CU.username; });
+  if (emp && emp.department) return [emp.department];
+  return null;
+}
+
+function loadAlarm() {
+  var alarm = D.alarms.find(function(a) { return !a.resolved; });
+  if (!alarm) {
+    var _el=document.getElementById('pg-alarm');
+    _el.innerHTML='';
+    var _wrap=document.createElement('div');
+    _wrap.className='page';
+    _wrap.style.cssText='text-align:center;padding-top:60px';
+    _wrap.innerHTML='<div style="font-size:48px;margin-bottom:12px">&#x2705;</div><div style="font-size:18px;font-weight:700;color:#2e7d32">Kein aktiver Alarm</div>';
+    var _backBtn=document.createElement('button');
+    _backBtn.className='sbtn btn-gray';
+    _backBtn.style.cssText='margin-top:20px;padding:10px 20px';
+    _backBtn.textContent='\u2190 Zur\u00fcck';
+    _backBtn.onclick=function(){showTab('home');};
+    _wrap.appendChild(_backBtn);
+    _el.appendChild(_wrap);
+    return;
+  }
+  var cmap={};
+  D.checkins.filter(function(c) { return c.aid===alarm.id; }).forEach(function(c) { cmap[c.eid]=c.status; });
+  var present = alarm.snap.map(function(e) { return Object.assign({},e,{cs:cmap[e.id]||null}); });
+  // Filter by user's department if not admin
+  var userDepts = getUserDepts();
+  if (userDepts) {
+    present = present.filter(function(e) { return userDepts.indexOf(e.department) !== -1; });
+  }
+  // Check if user's depts already resolved
+  if (userDepts && alarm.resolvedDepts) {
+    var alreadyResolved = userDepts.every(function(d){ return alarm.resolvedDepts.indexOf(d) !== -1; });
+    if (alreadyResolved) {
+      document.getElementById('ciList').innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:12px">✅</div><div style="font-size:18px;font-weight:700;color:#2e7d32">Deine Abteilung ist abgemeldet</div></div>';
+      document.getElementById('aSafe').textContent = present.filter(function(e){return cmap[e.id]==='safe';}).length;
+      document.getElementById('aMiss').textContent = present.filter(function(e){return cmap[e.id]==='missing';}).length;
+      document.getElementById('aInj').textContent  = present.filter(function(e){return cmap[e.id]==='injured';}).length;
+      document.getElementById('aTotal').textContent = present.length;
+      return;
+    }
+  }
+
+  document.getElementById('aSafe').textContent  = present.filter(function(e){return e.cs==='safe';}).length;
+  document.getElementById('aMiss').textContent  = present.filter(function(e){return e.cs==='missing';}).length;
+  document.getElementById('aInj').textContent   = present.filter(function(e){return e.cs==='injured';}).length;
+  document.getElementById('aTotal').textContent = present.length;
+  document.getElementById('aTime').textContent  = 'Alarm: '+new Date(alarm.at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'})+' Uhr · '+alarm.by;
+  var container = document.getElementById('ciList');
+  container.innerHTML='';
+  present.forEach(function(e) {
+    var cs=e.cs;
+    var bg=cs==='safe'?'#e8f5e9':cs==='missing'?'#ffebee':cs==='injured'?'#fff3e0':'#f0f0f0';
+    var col=cs==='safe'?'#2e7d32':cs==='missing'?'#c62828':cs==='injured'?'#e65100':'#888';
+    var lbl=cs==='safe'?'✅ Sicher':cs==='missing'?'❗ Vermisst':cs==='injured'?'🚑 Verletzt':'❓ Unbekannt';
+    var div=document.createElement('div');
+    div.className='cc'+(cs?' '+cs:'');
+    div.innerHTML='<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px"><div><div class="cn">'+h(e.name)+'</div><div class="cd">'+h(e.department)+'</div>'+(e.phone?'<div style="font-size:12px;color:#555;margin-top:3px">📞 '+h(e.phone)+'</div>':'')+'</div><span style="font-size:12px;font-weight:600;padding:4px 10px;border-radius:20px;background:'+bg+';color:'+col+'">'+lbl+'</span></div><div class="arow"></div>';
+    var arow=div.querySelector('.arow');
+    [['safe','#e8f5e9','#2e7d32','✅ Sicher'],['missing','#ffebee','#c62828','❗ Vermisst'],['injured','#fff3e0','#e65100','🚑 Verletzt']].forEach(function(s) {
+      var btn=document.createElement('button');
+      btn.className='sbtn';
+      btn.style.cssText='flex:1;padding:9px;background:'+s[1]+';color:'+s[2];
+      btn.textContent=s[3];
+      btn.addEventListener('click',(function(aid,eid,st){return function(){checkin(aid,eid,st);};})(alarm.id,e.id,s[0]));
+      arow.appendChild(btn);
+    });
+    container.appendChild(div);
+  });
+}
+
+function checkin(aid,eid,status) {
+  D.checkins=D.checkins.filter(function(c){return !(c.aid===aid&&c.eid===eid);});
+  D.checkins.push({aid:aid,eid:eid,status:status});
+  save(); loadAlarm();
+}
+
+function endAlarm() {
+  var alarm = D.alarms.find(function(a){ return !a.resolved; });
+  if (!alarm) return;
+  var userDepts = getUserDepts();
+  var cmap = {};
+  D.checkins.filter(function(c){return c.aid===alarm.id;}).forEach(function(c){cmap[c.eid]=c.status;});
+  var snapToCheck = userDepts
+    ? alarm.snap.filter(function(e){ return userDepts.indexOf(e.department) !== -1; })
+    : alarm.snap;
+  var notOk = snapToCheck.filter(function(e){return !cmap[e.id]||cmap[e.id]==='missing';}).length;
+  var msg = notOk > 0 ? notOk+' Mitarbeiter noch nicht bestätigt. Trotzdem beenden?' : 'Alarm beenden?';
+  confirm2('Alarm beenden', msg, function(){
+    if (!userDepts) {
+      // Admin beendet gesamten Alarm
+      alarm.resolved = new Date().toISOString();
+    } else {
+      // Abteilungsleiter markiert seine Abteilungen als erledigt
+      if (!alarm.resolvedDepts) alarm.resolvedDepts = [];
+      userDepts.forEach(function(d){
+        if (alarm.resolvedDepts.indexOf(d) === -1) alarm.resolvedDepts.push(d);
+      });
+      // Alle Abteilungen erledigt? Dann Gesamtalarm beenden
+      var allDepts = D.departments.map(function(d){ return d.name; });
+      var allDone = allDepts.every(function(d){ return alarm.resolvedDepts.indexOf(d) !== -1; });
+      if (allDone) alarm.resolved = new Date().toISOString();
+    }
+    save(); toast('Alarm beendet','ok'); showTab('home');
+  });
+}
+
+// ══ EMPLOYEES ═════════════════════════════════════════════════
+var editEid=null, pendShifts=[];
+
+function renderEmps() {
+  var q = document.getElementById('empQ').value.toLowerCase();
+  var userDepts = getUserDepts();
+
+  // Group employees by dept - filter by user's allowed depts
+  var deptMap = {};
+  D.employees.forEach(function(emp){
+    if (userDepts && userDepts.indexOf(emp.department||'Sonstige') === -1) return;
+    if (q && !emp.name.toLowerCase().includes(q) && !(emp.department||'').toLowerCase().includes(q) && !(emp.position||'').toLowerCase().includes(q)) return;
+    var dept = emp.department || 'Sonstige';
+    if (!deptMap[dept]) deptMap[dept] = [];
+    deptMap[dept].push(emp);
+  });
+
+  var depts = Object.keys(deptMap).sort();
+  if (!depts.length) {
+    document.getElementById('empList').innerHTML = '<div class="empty">Keine Mitarbeiter gefunden</div>';
+    return;
+  }
+
+  var container = document.getElementById('empList');
+  container.innerHTML = '';
+
+  depts.forEach(function(dept){
+    var emps = deptMap[dept];
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.style.cssText = 'flex-direction:column;align-items:flex-start;gap:8px;padding:16px;cursor:pointer;transition:box-shadow .15s';
+    card.onmouseover = function(){this.style.boxShadow='0 4px 16px rgba(0,0,0,.12)';};
+    card.onmouseout  = function(){this.style.boxShadow='0 1px 4px rgba(0,0,0,.06)';};
+    card.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;width:100%">' +
+        '<div style="font-size:15px;font-weight:700;color:#1a1a2e">'+h(dept)+'</div>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+          '<div style="font-size:12px;color:#aaa">'+emps.length+' Mitarbeiter</div>' +
+          '<span style="color:#aaa;font-size:18px">›</span>' +
+        '</div>' +
+      '</div>';
+    card.addEventListener('click', (function(dp, ep){ return function(){ showEmpDeptDetail(dp, ep); }; })(dept, emps));
+    container.appendChild(card);
+  });
+}
+
+function showEmpDeptDetail(dept, emps) {
+  var days = ['Mo','Di','Mi','Do','Fr','Sa','So'];
+  var container = document.getElementById('empList');
+  container.innerHTML = '';
+
+  // Header with back button
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:16px';
+  var backBtn = document.createElement('button');
+  backBtn.className = 'sbtn btn-gray';
+  backBtn.textContent = '← Zurück';
+  backBtn.addEventListener('click', function(){ renderEmps(); });
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:17px;font-weight:700;color:#1a1a2e';
+  title.textContent = dept;
+  var cnt = document.createElement('div');
+  cnt.style.cssText = 'font-size:13px;color:#aaa;margin-left:auto';
+  cnt.textContent = emps.length + ' Mitarbeiter';
+
+  // Add button (admin only)
+  if (CU && CU.role === 'admin') {
+    var addBtn = document.createElement('button');
+    addBtn.className = 'sbtn sbtn-sm';
+    addBtn.style.cssText = 'background:#CC0000;color:#fff';
+    addBtn.textContent = '+ Hinzufügen';
+    addBtn.addEventListener('click', function(){ openEmpModal(); });
+    header.appendChild(backBtn); header.appendChild(title); header.appendChild(cnt); header.appendChild(addBtn);
+  } else {
+    header.appendChild(backBtn); header.appendChild(title); header.appendChild(cnt);
+  }
+  container.appendChild(header);
+
+  // Employee rows
+  emps.forEach(function(emp){
+    var sh = D.shifts.filter(function(s){return s.eid===emp.id;}).map(function(s){return days[s.day]+' '+s.s+'–'+s.e;}).join(', ') || 'Kein Schichtplan';
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML =
+      '<div class="ci">' +
+        '<div class="cn">'+h(emp.name)+'</div>' +
+        '<div class="cd">'+(emp.position?h(emp.position):'')+(emp.phone?' · 📞'+h(emp.phone):'')+'</div>' +
+        '<div class="cd" style="color:#bbb;margin-top:2px">⏰ '+h(sh)+'</div>' +
+      '</div>';
+    if (CU && CU.role === 'admin') {
+      var editBtn = document.createElement('button');
+      editBtn.className = 'sbtn sbtn-sm btn-gray';
+      editBtn.style.marginRight = '4px';
+      editBtn.textContent = '✏️';
+      editBtn.addEventListener('click', (function(eid){ return function(e){ e.stopPropagation(); openEmpModal(eid); }; })(emp.id));
+      var delBtn = document.createElement('button');
+      delBtn.className = 'sbtn sbtn-sm btn-gray';
+      delBtn.textContent = '🗑️';
+      delBtn.addEventListener('click', (function(eid, dp){ return function(e){
+        e.stopPropagation();
+        delEmp(eid, function(){ showEmpDeptDetail(dp, D.employees.filter(function(x){return (x.department||'Sonstige')===dp;})); });
+      }; })(emp.id, dept));
+      card.appendChild(editBtn);
+      card.appendChild(delBtn);
+    }
+    container.appendChild(card);
+  });
+}
+
+
+function openEmpModal(eid) {
+  editEid=eid||null; pendShifts=[];
+  document.getElementById('mEmpTitle').textContent=eid?'Mitarbeiter bearbeiten':'Mitarbeiter hinzufügen';
+  document.getElementById('eDept').innerHTML=D.departments.map(function(d){return '<option>'+h(d.name)+'</option>';}).join('');
+  document.querySelectorAll('.daybtn').forEach(function(b){b.classList.remove('on');});
+  if(eid){
+    var e=D.employees.find(function(x){return x.id===eid;});
+    document.getElementById('eName').value=e.name;
+    document.getElementById('eDept').value=e.department;
+    document.getElementById('ePos').value=e.position||'';
+    document.getElementById('eTel').value=e.phone||'';
+    pendShifts=D.shifts.filter(function(s){return s.eid===eid;}).map(function(s){return {day:s.day,s:s.s,e:s.e,t:Math.random()};}); 
+  } else {
+    ['eName','ePos','eTel'].forEach(function(id){document.getElementById(id).value='';});
+  }
+  renderPills(); openM('mEmp');
+}
+
+document.querySelectorAll('.daybtn').forEach(function(b){b.addEventListener('click',function(){b.classList.toggle('on');});});
+
+function addShift() {
+  var days=[...document.querySelectorAll('.daybtn.on')].map(function(b){return parseInt(b.dataset.d);});
+  var s=document.getElementById('sStart').value, e=document.getElementById('sEnd').value;
+  if(!days.length||!s||!e){toast('Wochentag und Zeiten wählen','err');return;}
+  days.forEach(function(d){pendShifts.push({day:d,s:s,e:e,t:Math.random()});});
+  document.querySelectorAll('.daybtn').forEach(function(b){b.classList.remove('on');}); renderPills();
+}
+function removeShift(t) { pendShifts=pendShifts.filter(function(s){return s.t!==t;}); renderPills(); }
+function renderPills() {
+  var days=['Mo','Di','Mi','Do','Fr','Sa','So'];
+  document.getElementById('sPills').innerHTML=pendShifts.map(function(s){
+    return '<span class="shift-pill">'+days[s.day]+' '+s.s+'–'+s.e+'<button onclick="removeShift('+s.t+')">×</button></span>';
+  }).join('');
+}
+
+function saveEmp() {
+  var name=document.getElementById('eName').value.trim();
+  var dept=document.getElementById('eDept').value;
+  var pos=document.getElementById('ePos').value.trim();
+  var tel=document.getElementById('eTel').value.trim();
+  if(!name||!dept){toast('Name und Abteilung erforderlich','err');return;}
+  if(editEid){
+    var emp=D.employees.find(function(e){return e.id===editEid;});
+    emp.name=name;emp.department=dept;emp.position=pos;emp.phone=tel;
+    D.shifts=D.shifts.filter(function(s){return s.eid!==editEid;});
+    pendShifts.forEach(function(s){D.shifts.push({id:nid('shift'),eid:editEid,day:s.day,s:s.s,e:s.e});});
+    toast('Aktualisiert','ok');
+  } else {
+    var id=nid('emp');
+    D.employees.push({id:id,name:name,department:dept,position:pos,phone:tel});
+    pendShifts.forEach(function(s){D.shifts.push({id:nid('shift'),eid:id,day:s.day,s:s.s,e:s.e});});
+    toast('Hinzugefügt','ok');
+  }
+  save(); closeM('mEmp'); renderEmps();
+}
+
+function delEmp(id, cb) {
+  var e=D.employees.find(function(x){return x.id===id;});
+  confirm2('Löschen','"'+e.name+'" wirklich löschen?',function(){
+    D.employees=D.employees.filter(function(x){return x.id!==id;});
+    D.shifts=D.shifts.filter(function(s){return s.eid!==id;});
+    save(); toast('Gelöscht','ok');
+    if (cb) cb(); else renderEmps();
+  });
+}
+
+// ══ EXCEL ═════════════════════════════════════════════════════
+function importXlsx(input) {
+  var file=input.files[0]; if(!file) return;
+  var reader=new FileReader();
+  reader.onload=function(e) {
+    try {
+      var wb=XLSX.read(e.target.result,{type:'binary'});
+      var rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      var imp=0,skip=0,td=today();
+      var SM={anwesend:'present',present:'present',krank:'sick',sick:'sick',urlaub:'vacation',vacation:'vacation',homeoffice:'homeoffice',abwesend:'absent',absent:'absent'};
+      rows.forEach(function(row) {
+        function k(x){return Object.keys(row).find(function(r){return r.toLowerCase().includes(x.toLowerCase());});}
+        var name=String(row[k('name')]||'').trim();
+        var pos=String(row[k('position')]||row[k('stelle')]||'').trim();
+        var dept=String(row[k('abteil')]||row[k('dept')]||'').trim();
+        var phone=String(row[k('telefon')]||row[k('tel')]||row[k('phone')]||'').trim();
+        var sr=String(row[k('status')]||'').trim().toLowerCase();
+        if(!name){skip++;return;}
+        if(dept&&!D.departments.find(function(d){return d.name===dept;})) D.departments.push({id:nid('dept'),name:dept});
+        if(D.employees.find(function(e){return e.name===name;})){skip++;return;}
+        var id=nid('emp');
+        D.employees.push({id:id,name:name,department:dept,position:pos,phone:phone});
+        imp++;
+        if(sr&&SM[sr]) D.adjustments.push({id:nid('adj'),eid:id,date:td,status:SM[sr],note:''});
+      });
+      save(); input.value=''; renderEmps();
+      toast('Import: '+imp+' neu, '+skip+' übersprungen','ok');
+    } catch(err){toast('Fehler: '+err.message,'err');}
+  };
+  reader.readAsBinaryString(file);
+}
+
+function dlTemplate() {
+  var wb = XLSX.utils.book_new();
+  var ws = XLSX.utils.aoa_to_sheet([
+    ['Name','Position','Abteilung','Telefon','Status'],
+    ['Max Mustermann','Produktmanager','Einkauf','0241-9170-1234','Anwesend'],
+    ['Erika Musterfrau','Teamleiterin','Controlling & Entwicklung','0241-9170-5678','Homeoffice'],
+    ['John Doe','Azubi','Vertrieb','0241-9170-9012','Krank'],
+    ['Jane Doe','Controller','Buchhaltung','0241-9170-3456','Urlaub'],
+    ['Hans Müller','Sachbearbeiter','Backoffice','0241-9170-7890','Abwesend'],
+  ]);
+  // Column widths
+  ws['!cols'] = [{wch:25},{wch:25},{wch:25},{wch:18},{wch:15}];
+  // Style header row
+  var headerStyle = {font:{bold:true},fill:{fgColor:{rgb:'1E3A8A'}},alignment:{horizontal:'center'}};
+  ['A1','B1','C1','D1','E1'].forEach(function(cell){
+    if(ws[cell]) ws[cell].s = headerStyle;
+  });
+  XLSX.utils.book_append_sheet(wb, ws, 'Mitarbeiter');
+  
+  // Add info sheet
+  var wsInfo = XLSX.utils.aoa_to_sheet([
+    ['FEUERALARM APP - Import Vorlage'],
+    [''],
+    ['Spalten:'],
+    ['Name', '(Pflicht) Vor- und Nachname des Mitarbeiters'],
+    ['Position', 'Stellenbezeichnung z.B. Produktmanager'],
+    ['Abteilung', 'Muss einer vorhandenen Abteilung entsprechen'],
+    ['Telefon', 'Durchwahl z.B. 0241-9170-1234'],
+    ['Status', 'Anwesend / Homeoffice / Krank / Urlaub / Abwesend'],
+    [''],
+    ['Hinweis: Mitarbeiter mit gleichem Namen werden übersprungen'],
+  ]);
+  wsInfo['!cols'] = [{wch:20},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, wsInfo, 'Hinweise');
+  
+  XLSX.writeFile(wb, 'Feueralarm_Mitarbeiter_Vorlage.xlsx');
+  toast('Vorlage heruntergeladen!', 'ok');
+}
+
+// ══ ADJUSTMENTS ═══════════════════════════════════════════════
+function today() { return new Date().toISOString().slice(0,10); }
+
+function renderAdjs() {
+  var date = document.getElementById('adjDateIn').value || today();
+  // Show dept summary cards, clickable to show employees
+  renderDeptCards(date, 'adjList', function(dept){
+    showAdjDeptDetail(dept, date);
+  });
+}
+
+function showAdjDeptDetail(dept, dateStr) {
+  var adjMap = {};
+  D.adjustments.filter(function(a){return a.date===dateStr;}).forEach(function(a){adjMap[a.eid]=a.status;});
+  var userDepts = getUserDepts();
+  var emps = D.employees.filter(function(e){
+    if (userDepts && userDepts.indexOf(e.department||'Sonstige') === -1) return false;
+    return (e.department||'Sonstige')===dept;
+  });
+  var ST = {present:{label:'✅ Anwesend',color:'#2e7d32',bg:'#e8f5e9'},sick:{label:'🤒 Krank',color:'#c62828',bg:'#ffebee'},vacation:{label:'🌴 Urlaub',color:'#1565c0',bg:'#e3f2fd'},homeoffice:{label:'🏠 Homeoffice',color:'#6a1b9a',bg:'#f3e5f5'},absent:{label:'❌ Abwesend',color:'#37474f',bg:'#f5f5f5'}};
+
+  var container = document.getElementById('adjList');
+  container.innerHTML = '';
+
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:16px';
+  var backBtn = document.createElement('button');
+  backBtn.className = 'sbtn btn-gray';
+  backBtn.textContent = '← Zurück';
+  backBtn.addEventListener('click', function(){ renderAdjs(); });
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:17px;font-weight:700;color:#1a1a2e';
+  title.textContent = dept;
+  var cnt = document.createElement('div');
+  cnt.style.cssText = 'font-size:13px;color:#aaa;margin-left:auto';
+  cnt.textContent = emps.length + ' Mitarbeiter';
+  header.appendChild(backBtn); header.appendChild(title); header.appendChild(cnt);
+  container.appendChild(header);
+
+  emps.forEach(function(emp){
+    var st = adjMap[emp.id] || null;
+    var cfg = st ? ST[st] : null;
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.style.cursor = 'pointer';
+    card.innerHTML =
+      '<div class="ci">' +
+        '<div class="cn">'+h(emp.name)+'</div>' +
+        '<div class="cd">'+(emp.position?h(emp.position):'')+'</div>' +
+      '</div>' +
+      (cfg
+        ? '<span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:'+cfg.bg+';color:'+cfg.color+'">'+cfg.label+'</span>'
+        : '<span style="font-size:12px;color:#bbb">Kein Status</span>');
+    card.addEventListener('click', (function(eid, ds, dp){ return function(){
+      openDeptCard(eid, ds);
+      setTimeout(function(){ showAdjDeptDetail(dp, ds); }, 100);
+    }; })(emp.id, dateStr, dept));
+    container.appendChild(card);
+  });
+}
+
+
+function openAdjModal() {
+  document.getElementById('adjEmp').innerHTML=D.employees.map(function(e){return '<option value="'+e.id+'">'+h(e.name)+' ('+h(e.department)+')</option>';}).join('');
+  document.getElementById('adjDate2').value=document.getElementById('adjDateIn').value||today();
+  document.getElementById('adjNote').value='';
+  openM('mAdj');
+}
+
+function saveAdj() {
+  var eid=parseInt(document.getElementById('adjEmp').value);
+  var date=document.getElementById('adjDate2').value;
+  var status=document.getElementById('adjStat').value;
+  var note=document.getElementById('adjNote').value.trim();
+  if(!date){toast('Datum erforderlich','err');return;}
+  var ex=D.adjustments.find(function(a){return a.eid===eid&&a.date===date;});
+  if(ex){ex.status=status;ex.note=note;} else D.adjustments.push({id:nid('adj'),eid:eid,date:date,status:status,note:note});
+  save(); closeM('mAdj'); renderAdjs(); toast('Gespeichert','ok');
+}
+
+function delAdj(id) {
+  D.adjustments=D.adjustments.filter(function(a){return a.id!==id;});
+  save(); renderAdjs(); toast('Gelöscht','ok');
+}
+
+// ══ DEPT OVERVIEW ═════════════════════════════════════════════
+var deptDate=new Date();
+function deptPrev(){deptDate.setDate(deptDate.getDate()-1);renderDepts();}
+function deptNext(){deptDate.setDate(deptDate.getDate()+1);renderDepts();}
+function deptToday(){deptDate=new Date();renderDepts();}
+
+function renderDepts() {
+  var ds = deptDate.toISOString().slice(0,10);
+  var td = today();
+  var DN = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+  var MN = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  document.getElementById('deptDateLbl').textContent = DN[deptDate.getDay()]+', '+deptDate.getDate()+'. '+MN[deptDate.getMonth()]+' '+deptDate.getFullYear();
+  document.getElementById('deptTodayLnk').style.display = ds===td ? 'none' : 'block';
+
+  renderDeptCards(ds, 'deptContent', function(dept){
+    showDeptsDetail(dept, ds);
+  });
+}
+
+function showDeptsDetail(dept, dateStr) {
+  var adjMap = {};
+  D.adjustments.filter(function(a){return a.date===dateStr;}).forEach(function(a){adjMap[a.eid]=a.status;});
+  var userDepts = getUserDepts();
+  var emps = D.employees.filter(function(e){
+    if (userDepts && userDepts.indexOf(e.department||'Sonstige') === -1) return false;
+    return (e.department||'Sonstige')===dept;
+  });
+  var ST = {present:{label:'✅ Anwesend',color:'#2e7d32',bg:'#e8f5e9'},sick:{label:'🤒 Krank',color:'#c62828',bg:'#ffebee'},vacation:{label:'🌴 Urlaub',color:'#1565c0',bg:'#e3f2fd'},homeoffice:{label:'🏠 Homeoffice',color:'#6a1b9a',bg:'#f3e5f5'},absent:{label:'❌ Abwesend',color:'#37474f',bg:'#f5f5f5'}};
+
+  var container = document.getElementById('deptContent');
+  container.innerHTML = '';
+
+  var header = document.createElement('div');
+  header.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:16px';
+  var backBtn = document.createElement('button');
+  backBtn.className = 'sbtn btn-gray';
+  backBtn.textContent = '← Zurück';
+  backBtn.addEventListener('click', function(){ renderDepts(); });
+  var title = document.createElement('div');
+  title.style.cssText = 'font-size:17px;font-weight:700;color:#1a1a2e';
+  title.textContent = dept;
+  var cnt = document.createElement('div');
+  cnt.style.cssText = 'font-size:13px;color:#aaa;margin-left:auto';
+  cnt.textContent = emps.length + ' Mitarbeiter';
+  header.appendChild(backBtn); header.appendChild(title); header.appendChild(cnt);
+  container.appendChild(header);
+
+  emps.forEach(function(emp){
+    var st = adjMap[emp.id] || null;
+    var cfg = st ? ST[st] : null;
+    var card = document.createElement('div');
+    card.className = 'card';
+    card.style.cursor = 'pointer';
+    card.innerHTML =
+      '<div class="ci">' +
+        '<div class="cn">'+h(emp.name)+'</div>' +
+        '<div class="cd">'+(emp.position?h(emp.position):'')+(emp.phone?' · 📞'+h(emp.phone):'')+'</div>' +
+      '</div>' +
+      (cfg
+        ? '<span style="font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;background:'+cfg.bg+';color:'+cfg.color+'">'+cfg.label+'</span>'
+        : '<span style="font-size:12px;color:#bbb">Kein Status</span>');
+    card.addEventListener('click', (function(eid, ds, dp){ return function(){
+      openDeptCard(eid, ds);
+      setTimeout(function(){ showDeptsDetail(dp, ds); }, 100);
+    }; })(emp.id, dateStr, dept));
+    container.appendChild(card);
+  });
+}
+
+
+function openDeptCard(eid,ds) {
+  var emp=D.employees.find(function(e){return e.id===eid;}); if(!emp) return;
+  var ST=[{key:'present',label:'✅ Anwesend',color:'#2e7d32',bg:'#e8f5e9'},{key:'sick',label:'🤒 Krank',color:'#c62828',bg:'#ffebee'},{key:'vacation',label:'🌴 Urlaub',color:'#1565c0',bg:'#e3f2fd'},{key:'homeoffice',label:'🏠 Homeoffice',color:'#6a1b9a',bg:'#f3e5f5'},{key:'absent',label:'❌ Abwesend',color:'#37474f',bg:'#f5f5f5'}];
+  var adj=D.adjustments.find(function(a){return a.eid===eid&&a.date===ds;});
+  document.getElementById('mCTitle').textContent=emp.name;
+  document.getElementById('mCBtns').style.display='none';
+  var msgDiv=document.getElementById('mCMsg');
+  msgDiv.innerHTML='<div style="color:#aaa;margin-bottom:12px">'+ds+'</div>';
+  ST.forEach(function(s){
+    var btn=document.createElement('button');
+    btn.style.cssText='display:block;width:100%;border:1.5px solid '+s.color+';border-radius:12px;padding:14px;margin-bottom:8px;background:'+s.bg+';color:'+s.color+';font-size:16px;font-weight:600;cursor:pointer;font-family:inherit;text-align:left';
+    btn.textContent=s.label;
+    btn.addEventListener('click',function(){
+      var ex=D.adjustments.find(function(a){return a.eid===eid&&a.date===ds;});
+      if(ex){ex.status=s.key;ex.note='';} else D.adjustments.push({id:nid('adj'),eid:eid,date:ds,status:s.key,note:''});
+      save(); closeM('mConfirm'); document.getElementById('mCBtns').style.display='';
+      renderDepts(); toast('Gespeichert','ok');
+    });
+    msgDiv.appendChild(btn);
+  });
+  if(adj){
+    var rbtn=document.createElement('button');
+    rbtn.style.cssText='display:block;width:100%;border:1.5px solid #ddd;border-radius:12px;padding:12px;background:#fff;color:#aaa;font-size:14px;cursor:pointer;font-family:inherit;text-align:left;margin-top:4px';
+    rbtn.textContent='🔄 Status zurücksetzen';
+    rbtn.addEventListener('click',function(){
+      D.adjustments=D.adjustments.filter(function(a){return !(a.eid===eid&&a.date===ds);});
+      save(); closeM('mConfirm'); document.getElementById('mCBtns').style.display='';
+      renderDepts(); toast('Zurückgesetzt','ok');
+    });
+    msgDiv.appendChild(rbtn);
+  }
+  openM('mConfirm');
+}
+
+// ══ HISTORY ═══════════════════════════════════════════════════
+function renderHist() {
+  var container = document.getElementById('histList');
+  if (!D.alarms.length) {
+    container.innerHTML = '<div class="empty"><div style="font-size:40px;margin-bottom:10px">📋</div>Noch keine Alarme</div>';
+    return;
+  }
+
+  // Group alarms by day
+  var dayMap = {};
+  [...D.alarms].reverse().forEach(function(alarm) {
+    var day = alarm.at.slice(0,10);
+    if (!dayMap[day]) dayMap[day] = [];
+    dayMap[day].push(alarm);
+  });
+
+  container.innerHTML = '';
+  Object.keys(dayMap).sort().reverse().forEach(function(day) {
+    var alarms = dayMap[day];
+    var d = new Date(day + 'T12:00:00');
+    var dayNames = ['Sonntag','Montag','Dienstag','Mittwoch','Donnerstag','Freitag','Samstag'];
+    var months = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+    var dayLabel = dayNames[d.getDay()]+', '+d.getDate()+'. '+months[d.getMonth()]+' '+d.getFullYear();
+    var hasActive = alarms.some(function(a){ return !a.resolved; });
+
+    // Folder card
+    var folder = document.createElement('div');
+    folder.className = 'card';
+    folder.style.cssText = 'flex-direction:column;gap:0;padding:0;overflow:hidden;cursor:pointer;margin-bottom:8px';
+    
+    var header = document.createElement('div');
+    header.style.cssText = 'display:flex;align-items:center;gap:12px;padding:14px 16px;background:#fff';
+    header.innerHTML = 
+      '<span style="font-size:24px">'+(hasActive?'🔥':'📁')+'</span>'+
+      '<div style="flex:1">'+
+        '<div style="font-size:15px;font-weight:700;color:#1a1a2e">'+dayLabel+'</div>'+
+        '<div style="font-size:12px;color:#888;margin-top:2px">'+alarms.length+' Alarm'+(alarms.length>1?'e':'')+(hasActive?' · <span style="color:#CC0000;font-weight:700">AKTIV</span>':'')+'</div>'+
+      '</div>'+
+      '<span class="fold-arrow" style="color:#aaa;font-size:18px;transition:transform .2s">›</span>';
+
+    var body = document.createElement('div');
+    body.style.cssText = 'display:none;border-top:1px solid #f0f0f0';
+    body.className = 'hist-body';
+
+    alarms.forEach(function(alarm) {
+      var cmap = {};
+      D.checkins.filter(function(c){return c.aid===alarm.id;}).forEach(function(c){cmap[c.eid]=c.status;});
+      var snap = alarm.snap||[];
+      var safe = snap.filter(function(e){return cmap[e.id]==='safe';}).length;
+      var miss = snap.filter(function(e){return cmap[e.id]==='missing';}).length;
+      var inj  = snap.filter(function(e){return cmap[e.id]==='injured';}).length;
+      var time = new Date(alarm.at).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+      var endTime = alarm.resolved ? new Date(alarm.resolved).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'}) : null;
+
+      var row = document.createElement('div');
+      row.style.cssText = 'padding:12px 16px;border-bottom:1px solid #f8f8f8;display:flex;flex-direction:column;gap:8px';
+      row.innerHTML =
+        '<div style="display:flex;justify-content:space-between;align-items:center">'+
+          '<div>'+
+            '<div style="font-size:14px;font-weight:600;color:#1a1a2e">🔥 Alarm '+time+' Uhr</div>'+
+            '<div style="font-size:12px;color:#888;margin-top:2px">'+h(alarm.by)+(endTime?' · Beendet: '+endTime+' Uhr':'')+'</div>'+
+            (!alarm.resolved?'<div style="font-size:11px;font-weight:700;color:#CC0000;margin-top:2px">● AKTIV</div>':'')+
+          '</div>'+
+          (CU&&CU.role==='admin'?'<button class="sbtn sbtn-sm btn-gray" onclick="delAlarm('+alarm.id+');event.stopPropagation()">🗑️</button>':'')+
+        '</div>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap">'+
+          '<span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;background:#e8f5e9;color:#2e7d32">✅ '+safe+' Sicher</span>'+
+          '<span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;background:#ffebee;color:#c62828">❗ '+miss+' Vermisst</span>'+
+          '<span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;background:#fff3e0;color:#e65100">🚑 '+inj+' Verletzt</span>'+
+          '<span style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;background:#f0f0f0;color:#888">👥 '+snap.length+' Gesamt</span>'+
+        '</div>';
+      body.appendChild(row);
+    });
+
+    folder.appendChild(header);
+    folder.appendChild(body);
+
+    // Toggle on click
+    header.addEventListener('click', function() {
+      var isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : 'block';
+      var arrow = header.querySelector('.fold-arrow');
+      arrow.style.transform = isOpen ? '' : 'rotate(90deg)';
+    });
+
+    // Auto-open if has active alarm
+    if (hasActive) {
+      body.style.display = 'block';
+      header.querySelector('.fold-arrow').style.transform = 'rotate(90deg)';
+    }
+
+    container.appendChild(folder);
+  });
+}
+
+function delAlarm(id) {
+  confirm2('Alarm löschen','Diesen Alarm löschen?',function(){
+    D.alarms=D.alarms.filter(function(a){return a.id!==id;});
+    D.checkins=D.checkins.filter(function(c){return c.aid!==id;});
+    save(); renderHist(); toast('Gelöscht','ok');
+  });
+}
+
+// ══ ADMIN ═════════════════════════════════════════════════════
+var editUid=null;
+function renderUsers() {
+  var html='';
+  D.users.forEach(function(u){
+    html+='<div class="card"><div class="ci"><div class="cn">'+h(u.username)+'</div></div><span class="role '+u.role+'">'+(u.role==='admin'?'Admin':u.role==='dept_head'?'Abtl.leiter':'Betrachter')+'</span><button class="sbtn sbtn-sm btn-gray" style="margin-left:6px" onclick="openUserModal('+u.id+')">✏️</button>'+(u.id!==CU.id?'<button class="sbtn sbtn-sm btn-gray" style="margin-left:4px" onclick="delUser('+u.id+')">🗑️</button>':'')+'</div>';
+  });
+  document.getElementById('userList').innerHTML=html||'<div class="empty">Keine Benutzer</div>';
+}
+
+function toggleDeptSelect() {
+  var role = document.getElementById('uRole').value;
+  document.getElementById('uDeptWrap').style.display = (role === 'dept_head' || role === 'viewer') ? 'block' : 'none';
+}
+
+function openUserModal(uid) {
+  editUid=uid||null;
+  document.getElementById('mUserTitle').textContent=uid?'Benutzer bearbeiten':'Benutzer anlegen';
+  // Build dept checkboxes
+  var cbContainer = document.getElementById('uDeptCheckboxes');
+  cbContainer.innerHTML = '';
+  D.departments.forEach(function(d){
+    var lbl = document.createElement('label');
+    lbl.style.cssText = 'display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:400;padding:8px 12px;border-radius:8px;border:1px solid #eee;background:#fafafa';
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = d.name;
+    cb.id = 'udept_'+d.id;
+    cb.style.cssText = 'width:16px;height:16px;flex-shrink:0;cursor:pointer;accent-color:#CC0000';
+    var span = document.createElement('span');
+    span.textContent = d.name;
+    lbl.appendChild(cb);
+    lbl.appendChild(span);
+    cbContainer.appendChild(lbl);
+  });
+  if(uid){
+    var u=D.users.find(function(x){return x.id===uid;});
+    document.getElementById('uName').value=u.username;
+    document.getElementById('uPass').value='';
+    document.getElementById('uRole').value=u.role;
+    // Check saved departments
+    var saved = u.departments || [];
+    D.departments.forEach(function(d){
+      var cb = document.getElementById('udept_'+d.id);
+      if(cb) cb.checked = saved.indexOf(d.name) !== -1;
+    });
+  } else {
+    document.getElementById('uName').value='';
+    document.getElementById('uPass').value='';
+    document.getElementById('uRole').value='viewer';
+  }
+  toggleDeptSelect();
+  openM('mUser');
+}
+
+function saveUser() {
+  var name=document.getElementById('uName').value.trim();
+  var pass=document.getElementById('uPass').value;
+  var role=document.getElementById('uRole').value;
+  if(!name){toast('Benutzername erforderlich','err');return;}
+  // Get selected departments
+  var depts = [];
+  document.querySelectorAll('#uDeptCheckboxes input:checked').forEach(function(cb){ depts.push(cb.value); });
+  if(editUid){
+    var u=D.users.find(function(x){return x.id===editUid;});
+    u.username=name;u.role=role;u.departments=depts;if(pass)u.password=pass;toast('Aktualisiert','ok');
+  } else {
+    if(!pass){toast('Passwort erforderlich','err');return;}
+    D.users.push({id:nid('user'),username:name,password:pass,role:role,departments:depts});toast('Angelegt','ok');
+  }
+  save(); closeM('mUser'); renderUsers();
+}
+
+function delUser(id) {
+  confirm2('Löschen','Benutzer wirklich löschen?',function(){
+    D.users=D.users.filter(function(u){return u.id!==id;});
+    save(); renderUsers(); toast('Gelöscht','ok');
+  });
+}
+
+function renderDeptAdmin() {
+  var html='';
+  D.departments.forEach(function(d){
+    html+='<div class="card"><div class="ci"><div class="cn">'+h(d.name)+'</div></div><button class="sbtn sbtn-sm btn-gray" onclick="delDept('+d.id+')">🗑️</button></div>';
+  });
+  document.getElementById('deptAdminList').innerHTML=html||'<div class="empty">Keine Abteilungen</div>';
+}
+
+function openDeptAdminModal(){document.getElementById('dName').value='';openM('mDept');}
+
+function saveDept() {
+  var name=document.getElementById('dName').value.trim();
+  if(!name){toast('Name erforderlich','err');return;}
+  D.departments.push({id:nid('dept'),name:name});
+  save(); closeM('mDept'); renderDeptAdmin(); toast('Angelegt','ok');
+}
+
+function delDept(id) {
+  confirm2('Löschen','Abteilung löschen?',function(){
+    D.departments=D.departments.filter(function(x){return x.id!==id;});
+    save(); renderDeptAdmin(); toast('Gelöscht','ok');
+  });
+}
+
+// ══ MODALS ════════════════════════════════════════════════════
+function openM(id){document.getElementById(id).classList.add('open');}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.overlay').forEach(function(o){
+  o.addEventListener('click',function(e){if(e.target===o){closeM(o.id);document.getElementById('mCBtns').style.display='';}});
+});
+var cbFn=null;
+function confirm2(title,msg,cb){
+  cbFn=cb;
+  document.getElementById('mCTitle').textContent=title;
+  document.getElementById('mCMsg').innerHTML=msg;
+  document.getElementById('mCBtns').style.display='';
+  document.getElementById('mCOk').onclick=function(){closeM('mConfirm');if(cbFn)cbFn();};
+  openM('mConfirm');
+}
+
+// ══ TOAST ═════════════════════════════════════════════════════
+var _tt;
+function toast(msg,type){
+  var el=document.getElementById('toast');
+  el.textContent=msg;el.className='toast show '+(type||'');
+  clearTimeout(_tt);_tt=setTimeout(function(){el.classList.remove('show');},2500);
+}
+
+// ══ UTILS ═════════════════════════════════════════════════════
+function h(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// Init
+document.getElementById('adjDateIn').value=today();
+
+// ══ EXPORT / IMPORT SETTINGS ══════════════════════════════════
+function exportSettings() {
+  var settings = {
+    version: 1,
+    exportDate: new Date().toISOString(),
+    users: D.users,
+    departments: D.departments,
+    employees: D.employees,
+    shifts: D.shifts,
+    adjustments: D.adjustments,
+    nid: D.nid
+  };
+  var json = JSON.stringify(settings, null, 2);
+  var blob = new Blob([json], {type: 'application/json'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'Feueralarm_Einstellungen_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('Einstellungen exportiert!', 'ok');
+}
+
+function importSettings(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var settings = JSON.parse(e.target.result);
+      if (!settings.version || !settings.users) {
+        toast('Ungültige Einstellungsdatei', 'err');
+        return;
+      }
+      confirm2('Einstellungen importieren',
+        'Alle aktuellen Daten werden durch die gespeicherten Einstellungen ersetzt. Fortfahren?',
+        function() {
+          if (settings.users)       D.users       = settings.users;
+          if (settings.departments) D.departments = settings.departments;
+          if (settings.employees)   D.employees   = settings.employees;
+          if (settings.shifts)      D.shifts      = settings.shifts;
+          if (settings.adjustments) D.adjustments = settings.adjustments;
+          if (settings.nid)         D.nid         = settings.nid;
+          save();
+          input.value = '';
+          renderUsers();
+          renderDeptAdmin();
+          toast('Einstellungen importiert!', 'ok');
+        }
+      );
+    } catch(e) {
+      toast('Fehler beim Lesen der Datei', 'err');
+    }
+  };
+  reader.readAsText(file);
+}
+</script>
+</body>
+</html>
