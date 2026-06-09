@@ -314,6 +314,9 @@ function doLogin() {
 
 function doLogout() {
   CU=null;
+  stopAutoRefresh();
+  if(window._globalPoll){clearInterval(window._globalPoll);window._globalPoll=null;}
+  SB_READY=false;
   document.getElementById('pgApp').style.display='none';
   document.getElementById('pgLogin').style.display='flex';
   document.getElementById('botNav').style.display='none';
